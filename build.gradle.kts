@@ -2,7 +2,7 @@ plugins {
     id("java")
 }
 
-group = "gg.litestrike.game"
+group = "gg.botanica.game"
 version = "1.0-SNAPSHOT"
 
 repositories {
