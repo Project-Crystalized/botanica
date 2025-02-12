@@ -1,9 +1,17 @@
 name: Botanica
 version: 0.0.1
-main: gg.litestrike.game.Botanica
+main: gg.botanica.game.Botanica
 api-version: '1.21.1'
 load: POSTWORLD
 
 # softdepend: [Crystalized_Essentials]
 
 depend: [ProtocolLib, Crystalized_Essentials]
+
+commands:
+  botanica_start:
+    description: "For debugging purposes, starts botanica game"
+    usage: "/botanica_start"
+    aliases: []
+    permission: botanica.command.game
+    permission-message: "you dont have permission to run the command"
