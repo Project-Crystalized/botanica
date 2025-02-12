@@ -4,9 +4,8 @@ main: gg.botanica.game.Botanica
 api-version: '1.21.1'
 load: POSTWORLD
 
-# softdepend: [Crystalized_Essentials]
 
-depend: [ProtocolLib, Crystalized_Essentials]
+depend: [ProtocolLib]
 
 commands:
   botanica_start:
