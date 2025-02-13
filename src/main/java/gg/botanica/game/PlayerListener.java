@@ -15,7 +15,6 @@ public class PlayerListener implements Listener {
 
  @EventHandler
  public void onInteract(PlayerInteractEvent event){
-     event.getPlayer().sendMessage("interact event");
      event.setCancelled(true);
      if(event.getAction() != RIGHT_CLICK_BLOCK){
          return;
@@ -24,19 +23,22 @@ public class PlayerListener implements Listener {
      Block b = event.getClickedBlock();
 
      if(b.getType() != GRASS_BLOCK && b.getType() != DIRT && b.getType() != COARSE_DIRT && b.getType() != ROOTED_DIRT){
-         event.getPlayer().sendMessage("not dirt returning");
          return;
      }
 
      Player p = event.getPlayer();
+     //TODO make hoe types
      if(p.getInventory().getItemInMainHand().getType() != STONE_HOE){
-         event.getPlayer().sendMessage("no stone hoe in main hand");
+         //TODO distinguish seeds
+         if(p.getInventory().getItemInMainHand().getType() == BEETROOT_SEEDS){
+            Plant.plantFromSeed(p, b.getLocation());
+         }
          return;
      }
-     if(Plant.dirt.indexOf(b.getType()) <= 0){
+     if(Dirt.dirt.indexOf(b.getType()) <= 0){
          return;
      }
-     Material m = Plant.dirt.get(Plant.dirt.indexOf(b.getType()) -1);
+     Material m = Dirt.dirt.get(Dirt.dirt.indexOf(b.getType()) -1);
      b.setType(m);
  }
 
