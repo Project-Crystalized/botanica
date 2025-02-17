@@ -23,6 +23,8 @@ public class Botanica extends JavaPlugin{
 
         DebugCommands dc = new DebugCommands();
         this.getCommand("botanica_start").setExecutor(dc);
+        this.getCommand("botanica_seed").setExecutor(dc);
+        //TODO grottos?
 
     }
 

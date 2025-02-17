@@ -29,9 +29,10 @@ public class PlayerListener implements Listener {
      Player p = event.getPlayer();
      //TODO make hoe types
      if(p.getInventory().getItemInMainHand().getType() != STONE_HOE){
-         //TODO distinguish seeds
+         //TODO distinguish seeds (is this already done? idk)
          if(p.getInventory().getItemInMainHand().getType() == BEETROOT_SEEDS){
-            Plant.plantFromSeed(p, b.getLocation());
+             PlayerData pd = Botanica.playerDatas.get(p.getName());
+            pd.plants.add(Plant.plantFromSeed(p, b.getLocation(), p.getInventory().getItemInMainHand()));
          }
          return;
      }
