@@ -23,7 +23,7 @@ public class DebugCommands implements CommandExecutor {
             case "botanica_seed":
                 return seedCommand(commandSender, args);
             case "water_can":
-                return waterCanCommand(commandSender);
+                //return waterCanCommand(commandSender);
             default: return false;
         }
 
@@ -53,6 +53,7 @@ public class DebugCommands implements CommandExecutor {
         }
         return false;
     }
+    /*
 
     public boolean waterCanCommand(CommandSender sender){
         if(sender instanceof Player){
@@ -65,6 +66,7 @@ public class DebugCommands implements CommandExecutor {
             //TODO finish this
         }
     }
+     */
 
 
 }

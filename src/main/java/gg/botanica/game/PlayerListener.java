@@ -1,5 +1,6 @@
 package gg.botanica.game;
 
+import io.papermc.paper.event.player.PlayerArmSwingEvent;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.HumanEntity;
@@ -7,12 +8,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.bukkit.Material.*;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 
 public class PlayerListener implements Listener {
-
+static List<String> startedEvent = new ArrayList<>();
  @EventHandler
  public void onInteract(PlayerInteractEvent event){
      event.setCancelled(true);
@@ -23,6 +28,7 @@ public class PlayerListener implements Listener {
      Block b = event.getClickedBlock();
 
      if(b.getType() != GRASS_BLOCK && b.getType() != DIRT && b.getType() != COARSE_DIRT && b.getType() != ROOTED_DIRT){
+         //TODO this makes it imposible to water farmland ^
          return;
      }
 
@@ -33,6 +39,10 @@ public class PlayerListener implements Listener {
          if(p.getInventory().getItemInMainHand().getType() == BEETROOT_SEEDS){
              PlayerData pd = Botanica.playerDatas.get(p.getName());
             pd.plants.add(Plant.plantFromSeed(p, b.getLocation(), p.getInventory().getItemInMainHand()));
+         }else if(p.getInventory().getItemInMainHand().getType() == COAL){
+             //TODO add customModelData check
+
+             startedEvent.add(p.getName());
          }
          return;
      }
