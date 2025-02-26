@@ -66,11 +66,13 @@ public class Plant {
         Location location = loc;
         location.setY(loc.getY()+0.5);
         BlockDisplay block = (BlockDisplay)location.getWorld().spawnEntity(loc,BLOCK_DISPLAY);
-        Display.Brightness bright = new Display.Brightness(14, 15);
+        Display.Brightness bright = new Display.Brightness(12, 15);
         block.setBrightness(bright);
         block.setBlock(Bukkit.createBlockData(MANGROVE_PROPAGULE));
         plant.createTextDisplay();
         plant.waterDisplay = plant.waterDisplay();
+        PlayerData pd = PlayerData.getPlayerData(p.getName());
+        pd.plants.add(plant);
         return plant;
     }
 

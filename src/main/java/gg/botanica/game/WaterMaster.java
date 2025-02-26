@@ -73,7 +73,18 @@ public class WaterMaster implements Listener {
 
     public void waterPlant(){
         PlayerData pd = PlayerData.getPlayerData(player.getName());
+        if(player.getTargetBlockExact(5) == null){
+            endWatering();
+            return;
+        }
+        Plant plant = pd.findPlant(player.getTargetBlockExact(5).getLocation());
+        if(plant == null){
+            player.sendMessage("There is no plant here."); //TODO make that message pretty
+            endWatering();
+            return;
+        }
+        plant.waterLevel++;
         pd.wateringCan.filling--;
-        //TODO add the stuff with the plant
+        //TODO this needs more work like checking how much the plant has been watered
     }
 }

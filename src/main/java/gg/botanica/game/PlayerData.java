@@ -32,4 +32,17 @@ public class PlayerData {
     public static PlayerData getPlayerData(String p){
        return Botanica.playerDatas.get(p);
     }
+
+    public Plant findPlant(Location loc){
+        for(Plant p : plants){
+            Location l = p.location;
+            l.setX(l.getBlockX());
+            l.setY(l.getBlockY());
+            l.setZ(l.getBlockZ());
+            if(l == loc){
+                return p;
+            }
+        }
+        return null;
+    }
 }
