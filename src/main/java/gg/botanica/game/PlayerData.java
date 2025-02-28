@@ -2,6 +2,7 @@ package gg.botanica.game;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -33,13 +34,9 @@ public class PlayerData {
        return Botanica.playerDatas.get(p);
     }
 
-    public Plant findPlant(Location loc){
+    public Plant findPlant(Block block){
         for(Plant p : plants){
-            Location l = p.location;
-            l.setX(l.getBlockX());
-            l.setY(l.getBlockY());
-            l.setZ(l.getBlockZ());
-            if(l == loc){
+            if(p.plantedOn == block){
                 return p;
             }
         }

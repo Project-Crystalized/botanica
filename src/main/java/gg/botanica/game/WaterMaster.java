@@ -1,22 +1,25 @@
 package gg.botanica.game;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 
 import static org.bukkit.Material.CHARCOAL;
 import static org.bukkit.Material.COAL;
 import static org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK;
 
 public class WaterMaster implements Listener {
-    Integer watering_plant;
+    Integer watering_plant = 7;
     List<String> watering_players = new ArrayList<>();
     Block previous_block;
     Player player;
@@ -38,8 +41,8 @@ public class WaterMaster implements Listener {
             }
         }.runTaskTimer(Botanica.getInstance(), 1,1);
     }
-    @EventHandler
-    public void onInteract(PlayerInteractEvent event){
+
+    public void water(PlayerInteractEvent event){
         //TODO check if player is the owner of the plant
         if(event.getAction() != RIGHT_CLICK_BLOCK){
             endWatering();
@@ -57,11 +60,7 @@ public class WaterMaster implements Listener {
             endWatering();
             return;
         }
-        if(pd.waterMaster == null){
-            pd.waterMaster = new WaterMaster();
-        }
         pd.waterMaster.previous_block = event.getClickedBlock();
-        pd.waterMaster.player = event.getPlayer();
         pd.waterMaster.watering_plant = 7;
     }
 
@@ -72,12 +71,13 @@ public class WaterMaster implements Listener {
     }
 
     public void waterPlant(){
+        player.sendMessage("watering the plant yay");
         PlayerData pd = PlayerData.getPlayerData(player.getName());
         if(player.getTargetBlockExact(5) == null){
             endWatering();
             return;
         }
-        Plant plant = pd.findPlant(player.getTargetBlockExact(5).getLocation());
+        Plant plant = pd.findPlant(player.getTargetBlockExact(10));
         if(plant == null){
             player.sendMessage("There is no plant here."); //TODO make that message pretty
             endWatering();

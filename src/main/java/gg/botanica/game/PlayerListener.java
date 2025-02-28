@@ -28,21 +28,23 @@ static List<String> startedEvent = new ArrayList<>();
      Block b = event.getClickedBlock();
 
      if(b.getType() != GRASS_BLOCK && b.getType() != DIRT && b.getType() != COARSE_DIRT && b.getType() != ROOTED_DIRT){
-         //TODO this makes it imposible to water farmland ^
+         //TODO this makes it impossible to water farmland ^
          return;
      }
 
      Player p = event.getPlayer();
+     PlayerData pd = Botanica.playerDatas.get(p.getName());
      //TODO make hoe types
      if(p.getInventory().getItemInMainHand().getType() != STONE_HOE){
          //TODO distinguish seeds (is this already done? idk)
          if(p.getInventory().getItemInMainHand().getType() == BEETROOT_SEEDS){
-             PlayerData pd = Botanica.playerDatas.get(p.getName());
             pd.plants.add(Plant.plantFromSeed(p, b.getLocation(), p.getInventory().getItemInMainHand()));
          }else if(p.getInventory().getItemInMainHand().getType() == COAL){
-             //TODO add customModelData check
-
-             startedEvent.add(p.getName());
+             if(pd.waterMaster == null){
+                 pd.waterMaster = new WaterMaster();
+                 pd.waterMaster.player = event.getPlayer();
+             }
+             pd.waterMaster.water(event);
          }
          return;
      }

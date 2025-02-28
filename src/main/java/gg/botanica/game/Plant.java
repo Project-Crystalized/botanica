@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.Block;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
@@ -34,19 +35,19 @@ public class Plant {
         tree, flower, vine
     }
     static NamespacedKey key = new NamespacedKey(Botanica.getInstance(), "plugin");
-    Location location;
-    List<Location> blockLocation = new ArrayList<>();
+    Block plantedOn;
+    List<Block> allBlocks = new ArrayList<>();
     int growUpTime;
     static state state;
     Player owner;
     PlantType exactType;
     int waterLevel;
     TextDisplay waterDisplay;
-    int TimerId;
+    int TimerId;//TODO remove this?
     boolean inInventory;
 
-    public Plant(Location location, int growUpTime, state state, Player owner, PlantType exactType, boolean inInventory){
-        this.location = location;
+    public Plant(Block plantedOn, int growUpTime, state state, Player owner, PlantType exactType, boolean inInventory){
+        this.plantedOn = plantedOn;
         this.growUpTime = growUpTime;
         this.state = state;
         this.owner = owner;
@@ -62,7 +63,7 @@ public class Plant {
         if(integer == null){
             return null;
         }
-        Plant plant = new Plant(loc, 0, state.sprout, p, PlantType.values()[integer], false);
+        Plant plant = new Plant(loc.getBlock(), 0, state.sprout, p, PlantType.values()[integer], false);
         Location location = loc;
         location.setY(loc.getY()+0.5);
         BlockDisplay block = (BlockDisplay)location.getWorld().spawnEntity(loc,BLOCK_DISPLAY);
@@ -94,7 +95,8 @@ public class Plant {
     }
 
     public void createTextDisplay(){
-        Location loc = new Location(location.getWorld(),location.getBlockX(),location.getBlockY(), location.getBlockZ());
+        //TODO center all text displays on the block NOT the edge of the block
+        Location loc = new Location(plantedOn.getWorld(),plantedOn.getLocation().getBlockX(),plantedOn.getLocation().getBlockY(), plantedOn.getLocation().getBlockZ());
         loc.setY(loc.getY()+2.5);
         loc.setZ(loc.getZ()+1);
         TextDisplay display = (TextDisplay)loc.getWorld().spawnEntity(loc, TEXT_DISPLAY);
@@ -102,7 +104,7 @@ public class Plant {
     }
 
     public TextDisplay waterDisplay(){
-        Location loc = new Location(location.getWorld(),location.getBlockX(),location.getBlockY(), location.getBlockZ());
+        Location loc = new Location(plantedOn.getWorld(),plantedOn.getLocation().getBlockX(),plantedOn.getLocation().getBlockY(), plantedOn.getLocation().getBlockZ());
         loc.setY(loc.getY()+2.2);
         loc.setZ(loc.getZ()+1);
         TextDisplay display = (TextDisplay)loc.getWorld().spawnEntity(loc, TEXT_DISPLAY);
