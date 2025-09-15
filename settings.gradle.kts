@@ -1,2 +1,1 @@
-rootProject.name = "botanica-game"
-
+rootProject.name = "Botanica"

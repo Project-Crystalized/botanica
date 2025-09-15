@@ -1,23 +1,4 @@
 name: Botanica
-version: 0.0.1
-main: gg.botanica.game.Botanica
-api-version: '1.21.1'
-load: POSTWORLD
-
-
-depend: [ProtocolLib]
-
-commands:
-  botanica_start:
-    description: "For debugging purposes, starts botanica game"
-    usage: "/botanica_start"
-    aliases: []
-    permission: botanica.command.game
-    permission-message: "you dont have permission to run the command"
-
-  botanica_seed:
-    description: "For debugging purposes, gives a seed"
-    usage: "/botanica_seed"
-    aliases: []
-    permission: botanica.command.game
-    permission-message: "you dont have permission to run the command"
+version: '1.0-SNAPSHOT'
+main: gg.crystalized.botanica.Botanica
+api-version: '1.21'
