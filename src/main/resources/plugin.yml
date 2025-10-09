@@ -2,3 +2,11 @@ name: Botanica
 version: '1.0-SNAPSHOT'
 main: gg.crystalized.botanica.Botanica
 api-version: '1.21'
+description: A Minecraft plant simulation plugin
+author: Crystalized
+commands:
+  botanica:
+    description: Main command for plant simulation management
+    usage: /botanica <subcommand> [args]
+    permission: botanica.use
+    aliases: [plant, bot]
