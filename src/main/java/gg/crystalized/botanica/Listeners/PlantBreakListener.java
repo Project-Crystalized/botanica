@@ -6,6 +6,7 @@ import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
+import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
 import gg.crystalized.botanica.PlantSim.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
@@ -42,6 +43,7 @@ public class PlantBreakListener implements Listener {
     private final SchematicManager schematicManager;
     private final SimulationDataManager dataManager;
     private final BotanicaSimulationConfig config;
+    private final BlockAliasManager aliasManager;
     private final Random random = new Random();
     
     public PlantBreakListener(
@@ -49,27 +51,57 @@ public class PlantBreakListener implements Listener {
         SchematicBlockIndex schematicBlockIndex,
         SchematicManager schematicManager,
         SimulationDataManager dataManager,
-        BotanicaSimulationConfig config
+        BotanicaSimulationConfig config,
+        BlockAliasManager aliasManager
     ) {
         this.plantRepo = plantRepo;
         this.schematicBlockIndex = schematicBlockIndex;
         this.schematicManager = schematicManager;
         this.dataManager = dataManager;
         this.config = config;
+        this.aliasManager = aliasManager;
+    }
+    
+    /**
+     * Check if a material (with or without block states) is on the allow list.
+     * Supports vanilla materials, block state syntax, and aliases.
+     * 
+     * @param materialWithStates Full material string (may include block states or be pre-resolved from alias)
+     * @return true if this material is safe to break without destroying the whole plant
+     */
+    private boolean isOnAllowList(String materialWithStates) {
+        // Extract base material (remove block states)
+        String baseMaterial = materialWithStates;
+        int bracketIndex = materialWithStates.indexOf('[');
+        if (bracketIndex != -1) {
+            baseMaterial = materialWithStates.substring(0, bracketIndex);
+        }
+        
+        // Check if base material is on allow list
+        if (config.blockBreakAllowList.contains(baseMaterial)) {
+            return true;
+        }
+        
+        // Check if the full string (with states) is on allow list
+        if (config.blockBreakAllowList.contains(materialWithStates)) {
+            return true;
+        }
+        
+        // Check if any alias in the allow list resolves to this material
+        for (String allowedItem : config.blockBreakAllowList) {
+            String resolved = aliasManager.resolve(allowedItem);
+            if (resolved.equals(materialWithStates) || resolved.equals(baseMaterial)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         Location location = event.getBlock().getLocation();
-        String brokenBlockType = event.getBlock().getType().name();
-        
-        // Check if this block is on the allow list (safe to break without triggering removal)
-        if (config.blockBreakAllowList.contains(brokenBlockType)) {
-            return; // Allow vanilla behavior, don't remove plant
-        }
-        
-        // Convert location to BlockPos
         BlockPos blockPos = BlockPos.fromBukkitLocation(location);
         
         // Try to find the plant at this position
@@ -85,10 +117,22 @@ public class PlantBreakListener implements Listener {
             return; // Invalid spec, shouldn't happen
         }
         
-        // Determine what stage the plant is at
+        // If this is a schematic plant, check if the broken block is on the allow list
+        if (plant.currentSchematicId != null) {
+            TreeSchematic schematic = schematicManager.getSchematic(plant.currentSchematicId);
+            if (schematic != null) {
+                // Find which schematic block was broken
+                String brokenBlockMaterial = findSchematicBlockMaterial(schematic, plant, blockPos);
+                if (brokenBlockMaterial != null && isOnAllowList(brokenBlockMaterial)) {
+                    // This block is on the allow list - allow vanilla break, don't remove plant
+                    return;
+                }
+            }
+        }
+        
+        // Block is not on allow list (or single-block plant) - remove entire plant
         boolean isSchematicStage = plant.currentSchematicId != null;
         
-        // Handle drops and removal based on plant type and stage
         if (isSchematicStage) {
             handleSchematicPlantBreak(plant, spec, player);
         } else {
@@ -115,26 +159,46 @@ public class PlantBreakListener implements Listener {
     /**
      * Handles breaking a multi-block schematic plant.
      * Removes entire schematic and drops all non-allow-list blocks.
+     * Handles race conditions by also clearing the currently visible schematic.
      */
     private void handleSchematicPlantBreak(PlantInstance plant, PlantSpec spec, Player player) {
-        // Load the schematic
+        // Load the schematic based on currentSchematicId
         TreeSchematic schematic = schematicManager.getSchematic(plant.currentSchematicId);
         if (schematic == null) {
             return; // Schematic not found, shouldn't happen
+        }
+        
+        // Also determine what schematic SHOULD be visible based on current progress
+        // This handles race conditions where the visual updated but currentSchematicId is stale
+        String expectedSchematicId = determineCurrentSchematicId(plant, spec);
+        TreeSchematic expectedSchematic = null;
+        if (expectedSchematicId != null && !expectedSchematicId.equals(plant.currentSchematicId)) {
+            expectedSchematic = schematicManager.getSchematic(expectedSchematicId);
         }
         
         // Count blocks by material type (excluding allow list for drops)
         Map<String, Integer> blockCounts = new HashMap<>();
         
         for (TreeSchematic.SchematicBlock block : schematic.blocks()) {
-            String material = block.material();
+            String materialWithStates = block.material();
+            
+            // Extract base material name (remove block states if present)
+            // e.g., "BROWN_MUSHROOM_BLOCK[north=true,...]" -> "BROWN_MUSHROOM_BLOCK"
+            String baseMaterial = materialWithStates;
+            int bracketIndex = materialWithStates.indexOf('[');
+            if (bracketIndex != -1) {
+                baseMaterial = materialWithStates.substring(0, bracketIndex);
+            }
+            
+            // Apply rotation to block coordinates
+            int[] rotated = SchematicManager.rotateBlock(block.x(), block.z(), plant.rotation);
             
             // Remove ALL blocks from world (including allow list blocks like leaves)
             BlockPos blockPos = new BlockPos(
                 plant.pos.world(),
-                plant.pos.x() + block.x(),
+                plant.pos.x() + rotated[0],
                 plant.pos.y() + block.y(),
-                plant.pos.z() + block.z()
+                plant.pos.z() + rotated[1]
             );
             
             Location blockLocation = new Location(
@@ -147,8 +211,8 @@ public class PlantBreakListener implements Listener {
             blockLocation.getBlock().setType(Material.AIR);
             
             // Count this block for drops ONLY if NOT on allow list
-            if (!config.blockBreakAllowList.contains(material)) {
-                blockCounts.put(material, blockCounts.getOrDefault(material, 0) + 1);
+            if (!isOnAllowList(materialWithStates)) {
+                blockCounts.put(baseMaterial, blockCounts.getOrDefault(baseMaterial, 0) + 1);
             }
         }
         
@@ -183,6 +247,75 @@ public class PlantBreakListener implements Listener {
         
         // Unregister schematic from spatial index
         schematicBlockIndex.unregisterSchematic(plant.pos, schematic);
+        
+        // Clean up expected schematic if it's different (race condition fix)
+        if (expectedSchematic != null) {
+            for (TreeSchematic.SchematicBlock block : expectedSchematic.blocks()) {
+                // Apply rotation
+                int[] rotated = SchematicManager.rotateBlock(block.x(), block.z(), plant.rotation);
+                
+                BlockPos blockPos = new BlockPos(
+                    plant.pos.world(),
+                    plant.pos.x() + rotated[0],
+                    plant.pos.y() + block.y(),
+                    plant.pos.z() + rotated[1]
+                );
+                
+                Location blockLocation = new Location(
+                    player.getWorld(),
+                    blockPos.x(),
+                    blockPos.y(),
+                    blockPos.z()
+                );
+                
+                // Only clear if it's not already air (avoid unnecessary updates)
+                if (blockLocation.getBlock().getType() != Material.AIR) {
+                    blockLocation.getBlock().setType(Material.AIR);
+                }
+            }
+            
+            // Also unregister this schematic from index
+            schematicBlockIndex.unregisterSchematic(plant.pos, expectedSchematic);
+        }
+    }
+    
+    /**
+     * Determine what schematic should be visible based on plant progress.
+     * Used to handle race conditions during stage transitions.
+     */
+    private String determineCurrentSchematicId(PlantInstance plant, PlantSpec spec) {
+        if (spec.mutations == null || spec.mutations.stages == null || spec.mutations.stages.isEmpty()) {
+            return null;
+        }
+        
+        // Combine growth and harvestable stages
+        java.util.List<String> allStages = new java.util.ArrayList<>(spec.mutations.stages);
+        if (spec.mutations.harvestableStages != null && !spec.mutations.harvestableStages.isEmpty()) {
+            allStages.addAll(spec.mutations.harvestableStages);
+        }
+        
+        int totalStageCount = allStages.size();
+        if (totalStageCount == 0) {
+            return null;
+        }
+        
+        // Calculate current stage index (same logic as SimulationService)
+        int currentStageIndex;
+        if (plant.complete || plant.progress >= 1.0) {
+            currentStageIndex = totalStageCount - 1;
+        } else {
+            double stageProgress = plant.progress * 0.99;
+            currentStageIndex = Math.max(0, Math.min(totalStageCount - 2, (int) (stageProgress * (totalStageCount - 1))));
+        }
+        
+        String stageVisual = allStages.get(currentStageIndex);
+        
+        // Check if it's a schematic
+        if (stageVisual.startsWith("schematic:")) {
+            return stageVisual.substring("schematic:".length());
+        }
+        
+        return null; // Not a schematic stage
     }
     
     /**
@@ -204,6 +337,48 @@ public class PlantBreakListener implements Listener {
         }
         
         return null; // No plant found
+    }
+    
+    /**
+     * Find the material definition of the schematic block at the given position.
+     * Accounts for rotation when matching coordinates.
+     * 
+     * @param schematic The schematic to search
+     * @param plant The plant instance (for root position and rotation)
+     * @param brokenPos The position of the broken block
+     * @return The material string from the schematic, or null if not found
+     */
+    private String findSchematicBlockMaterial(TreeSchematic schematic, PlantInstance plant, BlockPos brokenPos) {
+        // Calculate relative position from plant root
+        int relX = brokenPos.x() - plant.pos.x();
+        int relY = brokenPos.y() - plant.pos.y();
+        int relZ = brokenPos.z() - plant.pos.z();
+        
+        // Reverse the rotation to find the original schematic coordinates
+        int[] unrotated = reverseRotateBlock(relX, relZ, plant.rotation);
+        
+        // Find matching block in schematic
+        for (TreeSchematic.SchematicBlock block : schematic.blocks()) {
+            if (block.x() == unrotated[0] && block.y() == relY && block.z() == unrotated[1]) {
+                return block.material();
+            }
+        }
+        
+        return null; // Block not found in schematic (shouldn't happen)
+    }
+    
+    /**
+     * Reverse rotation to convert world coordinates back to schematic coordinates.
+     */
+    private int[] reverseRotateBlock(int x, int z, int rotation) {
+        // Reverse rotation is the opposite direction
+        return switch (rotation) {
+            case 0 -> new int[]{x, z};           // No rotation
+            case 90 -> new int[]{z, -x};         // Reverse 90° clockwise = 90° counter-clockwise
+            case 180 -> new int[]{-x, -z};       // 180° is its own reverse
+            case 270 -> new int[]{-z, x};        // Reverse 270° clockwise = 90° clockwise
+            default -> new int[]{x, z};          // Fallback
+        };
     }
 }
 

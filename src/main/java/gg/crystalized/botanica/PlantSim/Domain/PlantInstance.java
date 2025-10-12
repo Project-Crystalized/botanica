@@ -27,6 +27,7 @@ public class PlantInstance {
     public double fertility = 0.0;   // Bonus added to drop ranges (e.g., 2.5 = +2.5 to min/max)
     public int rotation = 0;         // 0, 90, 180, or 270 degrees (for Y-axis rotation of schematics)
 
+
     // Scheduling
     public Instant lastSimAt = Instant.now();
     public Instant nextUpdateAt = Instant.now();

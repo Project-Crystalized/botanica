@@ -34,7 +34,8 @@ public final class PlantSpec {
     }
 
     public static final class Mutations {
-        public List<String> stages;
+        public List<String> stages;              // Growth stages (not harvestable)
+        public List<String> harvestableStages;   // Harvestable stages (can harvest with drop multiplier)
         // Future: growthSounds, harvestSounds, particles, etc.
     }
 

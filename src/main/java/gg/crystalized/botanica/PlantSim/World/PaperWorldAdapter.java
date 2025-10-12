@@ -14,10 +14,34 @@ public class PaperWorldAdapter implements WorldAdapter {
         World w = server.getWorld(pos.world());
         if (w == null) return;
         Block b = w.getBlockAt(pos.x(), pos.y(), pos.z());
-        Material m = Material.matchMaterial(materialName);
+        
+        // Parse block states from material name (e.g., "BROWN_MUSHROOM_BLOCK[north=true,east=false]")
+        String baseMaterial = materialName;
+        String blockStates = null;
+        
+        int bracketIndex = materialName.indexOf('[');
+        if (bracketIndex != -1) {
+            baseMaterial = materialName.substring(0, bracketIndex);
+            blockStates = materialName.substring(bracketIndex + 1, materialName.length() - 1); // Remove [ and ]
+        }
+        
+        Material m = Material.matchMaterial(baseMaterial);
         if (m == null) return;
+        
         b.setType(m, false);
-        // probably something with block state here idk
+        
+        // Apply block states if present
+        if (blockStates != null && !blockStates.isEmpty()) {
+            try {
+                // Use Bukkit's createBlockData to parse the full block state string
+                // Format: "MATERIAL[property=value,property=value]"
+                var blockData = Bukkit.createBlockData(m, "[" + blockStates + "]");
+                b.setBlockData(blockData, false);
+            } catch (IllegalArgumentException e) {
+                // Invalid block state syntax, just use default block type
+                // Already set via b.setType(m, false) above
+            }
+        }
     }
 
     @Override

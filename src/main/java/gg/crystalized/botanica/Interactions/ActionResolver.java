@@ -97,7 +97,6 @@ public class ActionResolver {
         );
         
         plantActions.hoeSoil(ctx.clickedPos, "LOAMY", hoeStats);
-        ctx.player.sendMessage(ChatColor.GREEN + "Tilled soil!");
         
         // Process item consumption/giving
         processItemAfterAction(ctx, stats);
@@ -114,13 +113,10 @@ public class ActionResolver {
         // Attempt harvest
         boolean success = plantActions.harvestPlant(ctx.plant.pos, 0); // lootLevel from enchantments later
         if (success) {
-            ctx.player.sendMessage(ChatColor.GREEN + "Harvested plant!");
-            
             // Process item consumption/giving
             processItemAfterAction(ctx, stats);
-        } else {
-            ctx.player.sendMessage(ChatColor.YELLOW + "Plant is not ready to harvest yet!");
         }
+        // If harvest failed (not ready), silently fail - action bar shows status
         return true;
     }
     
@@ -145,7 +141,6 @@ public class ActionResolver {
         );
         
         plantActions.plantSeed(ctx.player.getUniqueId().toString(), stats.plantSpecId, plantPos);
-        ctx.player.sendMessage(ChatColor.GREEN + "Planted " + stats.plantSpecId + "!");
         
         // Process item consumption/giving
         processItemAfterAction(ctx, stats);
@@ -159,7 +154,6 @@ public class ActionResolver {
         }
         
         plantActions.waterSoil(ctx.soil.pos, stats.amount);
-        ctx.player.sendMessage(ChatColor.AQUA + "Added " + stats.amount + " water!");
         
         // Process item consumption/giving
         processItemAfterAction(ctx, stats);
@@ -173,7 +167,6 @@ public class ActionResolver {
         }
         
         plantActions.drainSoil(ctx.soil.pos, stats.amount);
-        ctx.player.sendMessage(ChatColor.GRAY + "Removed " + stats.amount + " water!");
         
         // Process item consumption/giving
         processItemAfterAction(ctx, stats);
@@ -187,7 +180,6 @@ public class ActionResolver {
         }
         
         plantActions.bindNutrients(ctx.soil.pos, stats.amount);
-        ctx.player.sendMessage(ChatColor.YELLOW + "Added " + stats.amount + " nutrients!");
         
         // Process item consumption/giving
         processItemAfterAction(ctx, stats);
@@ -202,7 +194,6 @@ public class ActionResolver {
         
         // Use negative amount to remove nutrients
         plantActions.bindNutrients(ctx.soil.pos, -stats.amount);
-        ctx.player.sendMessage(ChatColor.GRAY + "Removed " + stats.amount + " nutrients!");
         
         // Process item consumption/giving
         processItemAfterAction(ctx, stats);

@@ -203,9 +203,11 @@ public class PlantActions {
 
     /**
      * Harvest a mature plant.
-     * Computes drops (fertility × loot mult), applies world changes via mutation bus.
+     * Computes drops (fertility × loot mult × stage mult), applies world changes via mutation bus.
      * Handles both single-block plants and multi-block schematic plants.
-     * Supports renewable harvest (regresses to 2nd-to-last stage) if destroyOnHarvest = false.
+     * Supports progressive harvesting: plant must be in harvestable stages (not just growth stages).
+     * Drop multiplier based on position in harvestable stages (e.g., 25%, 50%, 75%, 100%).
+     * Supports renewable harvest (regresses to first harvestable stage) if destroyOnHarvest = false.
      * 
      * @return true if harvest succeeded, false if plant not ready
      */
@@ -214,20 +216,48 @@ public class PlantActions {
         if (plant == null) {
             return false; // No plant
         }
-        
-        if (!plant.complete) {
-            return false; // Not ready to harvest
-        }
 
-        // Get plant spec for drops
+        // Get plant spec for drops and stage info
         var spec = data.plants().get(plant.speciesId);
         if (spec == null) {
             return false;
         }
+        
+        // Check if plant is in harvestable stage range
+        if (spec.mutations == null || spec.mutations.stages == null || spec.mutations.stages.isEmpty()) {
+            return false; // No stages defined
+        }
+        
+        if (spec.mutations.harvestableStages == null || spec.mutations.harvestableStages.isEmpty()) {
+            return false; // No harvestable stages defined
+        }
+        
+        // Calculate current stage based on progress
+        int growthStageCount = spec.mutations.stages.size();
+        int harvestableStageCount = spec.mutations.harvestableStages.size();
+        int totalStageCount = growthStageCount + harvestableStageCount;
+        
+        // Determine current stage index
+        int currentStageIndex;
+        if (plant.complete || plant.progress >= 1.0) {
+            currentStageIndex = totalStageCount - 1; // Last stage
+        } else {
+            double stageProgress = plant.progress * 0.99; // Scale to 0-99%
+            currentStageIndex = Math.max(0, Math.min(totalStageCount - 2, (int) (stageProgress * (totalStageCount - 1))));
+        }
+        
+        // Check if plant is in harvestable range
+        if (currentStageIndex < growthStageCount) {
+            return false; // Still in growth stages, not harvestable yet
+        }
+        
+        // Calculate drop multiplier based on position in harvestable stages
+        int harvestableStageIndex = currentStageIndex - growthStageCount; // 0-based index within harvestable stages
+        double stageMultiplier = (harvestableStageIndex + 1.0) / harvestableStageCount;
 
-        // Calculate effective fertility (base + bonus from loot enchantments)
+        // Calculate effective fertility (base + bonus from loot enchantments) × stage multiplier
         double lootMultiplier = 1.0 + hoeLootLevel;
-        double effectiveFertility = plant.fertility * lootMultiplier;
+        double effectiveFertility = plant.fertility * lootMultiplier * stageMultiplier;
 
         // Generate drops
         if (spec.drops != null) {
@@ -281,7 +311,13 @@ public class PlantActions {
      */
     private void removeVisualBlocks(PlantInstance plant, gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec spec) {
         if (spec.mutations != null && spec.mutations.stages != null && !spec.mutations.stages.isEmpty()) {
-            String lastStage = spec.mutations.stages.get(spec.mutations.stages.size() - 1);
+            // Combine growth stages and harvestable stages
+            java.util.List<String> allStages = new java.util.ArrayList<>(spec.mutations.stages);
+            if (spec.mutations.harvestableStages != null && !spec.mutations.harvestableStages.isEmpty()) {
+                allStages.addAll(spec.mutations.harvestableStages);
+            }
+            
+            String lastStage = allStages.get(allStages.size() - 1);
             
             // Check if this is a schematic (starts with "schematic:")
             if (lastStage.startsWith("schematic:")) {
@@ -298,27 +334,35 @@ public class PlantActions {
     }
     
     /**
-     * Regress plant to 2nd-to-last stage for renewable harvest.
-     * Sets progress to start of 2nd-to-last stage, marks as incomplete, and updates visual.
+     * Regress plant to last growth stage for renewable harvest.
+     * This forces the plant to re-grow through growth stages before becoming harvestable again.
+     * Prevents spam-harvesting exploit where player could harvest repeatedly at first harvestable stage.
+     * Sets progress to start of last growth stage, marks as incomplete, and updates visual.
      */
     private void regressPlantStage(PlantInstance plant, gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec spec) {
         if (spec.mutations == null || spec.mutations.stages == null || spec.mutations.stages.isEmpty()) {
             return;
         }
         
-        int stageCount = spec.mutations.stages.size();
-        if (stageCount < 2) {
-            // Safety check: need at least 2 stages for renewable harvest
-            return;
+        if (spec.mutations.harvestableStages == null || spec.mutations.harvestableStages.isEmpty()) {
+            return; // No harvestable stages defined
         }
         
-        // Calculate progress for start of 2nd-to-last stage
-        // For N stages: stage boundaries are at 0%, 100/(N-1)%, 200/(N-1)%, ..., 100%
-        // 2nd-to-last stage index = N-2
-        // Its start progress = (N-2) / (N-1) + small epsilon
+        // Combine growth stages and harvestable stages
+        int growthStageCount = spec.mutations.stages.size();
+        int harvestableStageCount = spec.mutations.harvestableStages.size();
+        int totalStageCount = growthStageCount + harvestableStageCount;
+        
+        // Target is the LAST growth stage (index = growthStageCount - 1 in combined list)
+        // This ensures plant must re-grow before becoming harvestable again
+        int targetStageIndex = growthStageCount - 1;
+        
+        // Calculate progress for start of last growth stage
+        // For N total stages: stage boundaries are at 0%, 100/(N-1)%, 200/(N-1)%, ..., 100%
+        // Last growth stage index = growthStageCount - 1
+        // Its start progress = (growthStageCount - 1) / (totalStageCount - 1) + small epsilon
         // Add 1% buffer to ensure we're firmly inside the target stage (not at the edge)
-        int targetStageIndex = stageCount - 2;
-        double targetProgress = (targetStageIndex / (double)(stageCount - 1)) + 0.01;
+        double targetProgress = (targetStageIndex / (double)(totalStageCount - 1)) + 0.01;
         
         // Update plant state
         plant.progress = targetProgress;
@@ -326,8 +370,8 @@ public class PlantActions {
         plant.lastSimAt = Instant.now();
         plant.nextUpdateAt = plant.lastSimAt.plusSeconds(1); // Resume simulation soon
         
-        // Get 2nd-to-last stage visual
-        String targetStage = spec.mutations.stages.get(targetStageIndex);
+        // Get last growth stage visual
+        String targetStage = spec.mutations.stages.get(growthStageCount - 1);
         boolean targetIsSchematic = targetStage.startsWith("schematic:");
         String targetSchematicId = targetIsSchematic ? targetStage.substring("schematic:".length()) : null;
         

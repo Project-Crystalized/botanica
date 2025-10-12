@@ -14,13 +14,17 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Manages loading and caching of tree schematics from JSON files.
  * Schematics are loaded on-demand and cached for performance.
+ * Supports block aliases for cleaner schematic definitions.
  */
 public class SchematicManager {
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Map<String, TreeSchematic> loadedSchematics = new ConcurrentHashMap<>();
     private final File schematicDir;
+    private final BlockAliasManager aliasManager;
 
-    public SchematicManager() {
+    public SchematicManager(BlockAliasManager aliasManager) {
+        this.aliasManager = aliasManager;
+        
         // Ensure schematics directory exists
         schematicDir = new File(Botanica.INSTANCE.getDataFolder(), "sim/schematics");
         if (!schematicDir.exists()) {
@@ -28,9 +32,17 @@ public class SchematicManager {
             Botanica.INSTANCE.getLogger().info("Created schematics directory: " + schematicDir.getAbsolutePath());
         }
     }
+    
+    /**
+     * Get total number of loaded schematics.
+     */
+    public int getLoadedCount() {
+        return loadedSchematics.size();
+    }
 
     /**
      * Get a schematic by ID, loading it from file if not already cached.
+     * Silently loads schematics (errors still logged).
      * @param id The schematic ID (without .json extension)
      * @return The loaded schematic, or null if not found or invalid
      */
@@ -49,10 +61,13 @@ public class SchematicManager {
         }
 
         try (FileReader reader = new FileReader(schematicFile)) {
-            TreeSchematic schematic = gson.fromJson(reader, TreeSchematic.class);
-            if (schematic != null && schematic.id().equals(id)) {
-                // Validate that no blocks have negative Y values
-                for (var block : schematic.blocks()) {
+            TreeSchematic rawSchematic = gson.fromJson(reader, TreeSchematic.class);
+            if (rawSchematic != null && rawSchematic.id().equals(id)) {
+                // Resolve block aliases and validate
+                java.util.List<TreeSchematic.SchematicBlock> resolvedBlocks = new java.util.ArrayList<>();
+                
+                for (var block : rawSchematic.blocks()) {
+                    // Validate no negative Y values
                     if (block.y() < 0) {
                         Botanica.INSTANCE.getLogger().severe(
                             "INVALID SCHEMATIC: " + id + " contains block at Y=" + block.y() + 
@@ -60,8 +75,16 @@ public class SchematicManager {
                         );
                         return null;
                     }
+                    
+                    // Resolve material name through alias system
+                    String resolvedMaterial = aliasManager.resolve(block.material());
+                    resolvedBlocks.add(new TreeSchematic.SchematicBlock(
+                        block.x(), block.y(), block.z(), resolvedMaterial
+                    ));
                 }
-                Botanica.INSTANCE.getLogger().info("Loaded schematic: " + id + " with " + schematic.blocks().size() + " blocks");
+                
+                TreeSchematic schematic = new TreeSchematic(rawSchematic.id(), resolvedBlocks);
+                // Silently load schematic (batch logging happens elsewhere)
                 return schematic;
             } else {
                 Botanica.INSTANCE.getLogger().warning("Invalid schematic file or ID mismatch: " + schematicFile.getAbsolutePath());
@@ -86,8 +109,9 @@ public class SchematicManager {
      * Clear all cached schematics and reload from disk.
      */
     public void reloadAll() {
+        int previousCount = loadedSchematics.size();
         loadedSchematics.clear();
-        Botanica.INSTANCE.getLogger().info("Cleared schematic cache");
+        Botanica.INSTANCE.getLogger().info("Cleared schematic cache (" + previousCount + " schematics unloaded)");
     }
     
     /**

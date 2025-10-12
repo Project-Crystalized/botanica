@@ -174,10 +174,15 @@ public final class SimulationService {
             p.complete = true;
             p.nextUpdateAt = null;
 
-            // Choose the mature block from visuals (last stage), if present
+            // Choose the mature block from combined stages (last stage), if present
             String matureBlock = null;
             if (spec.mutations != null && spec.mutations.stages != null && !spec.mutations.stages.isEmpty()) {
-                matureBlock = spec.mutations.stages.get(spec.mutations.stages.size() - 1);
+                // Combine growth stages and harvestable stages
+                List<String> allStages = new ArrayList<>(spec.mutations.stages);
+                if (spec.mutations.harvestableStages != null && !spec.mutations.harvestableStages.isEmpty()) {
+                    allStages.addAll(spec.mutations.harvestableStages);
+                }
+                matureBlock = allStages.get(allStages.size() - 1);
             }
             return new BlockMutation(p.pos, matureBlock != null ? matureBlock : "OAK_SAPLING", null);
         }
@@ -341,24 +346,31 @@ public final class SimulationService {
      * Update the visual representation of a plant based on growth progress.
      * Supports both single-block stages and multi-block schematics.
      * Handles stage transitions by removing old schematic before placing new.
+     * Combines growth stages and harvestable stages for visual progression.
      */
     private void updatePlantVisual(PlantInstance plant, PlantSpec spec, double progress, boolean complete) {
         if (spec.mutations == null || spec.mutations.stages == null || spec.mutations.stages.isEmpty()) {
             return;
         }
         
-        int stageCount = spec.mutations.stages.size();
+        // Combine growth stages and harvestable stages into one list
+        List<String> allStages = new ArrayList<>(spec.mutations.stages);
+        if (spec.mutations.harvestableStages != null && !spec.mutations.harvestableStages.isEmpty()) {
+            allStages.addAll(spec.mutations.harvestableStages);
+        }
+        
+        int stageCount = allStages.size();
         String blockOrSchematic;
 
         if (complete || progress >= 1.0) {
             // Use the last block/schematic for complete stage (100% progress)
-            blockOrSchematic = spec.mutations.stages.get(stageCount - 1);
+            blockOrSchematic = allStages.get(stageCount - 1);
         } else {
             // Distribute stages across 0-99% progress (reserving 100% for complete stage)
             double stageProgress = progress * 0.99; // Scale to 0-99% to reserve last stage
             int currentStage = Math.min(stageCount - 2, (int) (stageProgress * (stageCount - 1)));
             currentStage = Math.max(0, currentStage); // Ensure we don't go below 0
-            blockOrSchematic = spec.mutations.stages.get(currentStage);
+            blockOrSchematic = allStages.get(currentStage);
         }
 
         // Determine if new stage is a schematic

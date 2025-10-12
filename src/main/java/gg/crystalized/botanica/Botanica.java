@@ -21,6 +21,7 @@ import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationService;
 import gg.crystalized.botanica.PlantSim.UI.PlantLookupTask;
 import gg.crystalized.botanica.PlantSim.UI.PlantStatusUI;
+import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
 import gg.crystalized.botanica.PlantSim.World.PaperWorldAdapter;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
@@ -47,6 +48,7 @@ public class Botanica extends JavaPlugin implements Listener {
     private MutationApplier mutationApplier;
     private SchematicBlockIndex schematicBlockIndex;
     private SchematicManager schematicManager;
+    private BlockAliasManager aliasManager;
     private BotanicaSimulationConfig config;
     
     // Interaction system
@@ -112,7 +114,8 @@ public class Botanica extends JavaPlugin implements Listener {
         workPlanner = new LocalWorkPlanner();
         mutationBus = new LocalMutationBus();
         schematicBlockIndex = new SchematicBlockIndex();
-        schematicManager = new SchematicManager();
+        aliasManager = new BlockAliasManager();
+        schematicManager = new SchematicManager(aliasManager);
         simulationService = new SimulationService(sdm, soilRepo, mutationBus, schematicBlockIndex, schematicManager);
         mutationApplier = new MutationApplier(mutationBus, new PaperWorldAdapter(getServer()), config.mutationCapPerTick);
         
@@ -123,7 +126,7 @@ public class Botanica extends JavaPlugin implements Listener {
         actionResolver = new ActionResolver(plantActions, soilRepo, plantRepo, schematicBlockIndex);
         
         // Register event listeners
-        registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config));
+        registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config, aliasManager));
         registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver));
         
         // Start simulation loop
