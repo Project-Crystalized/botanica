@@ -53,9 +53,18 @@ public class PlayerInteractListener implements Listener {
             return; // Not a Botanica item
         }
         
+        // Check if this is a PLANT action (planting seeds)
+        List<String> actions = registry.getActionsForItem(itemId);
+        boolean isPlantingItem = actions.contains("PLANT");
+        
+        PlantInstance plantAlongRay = null;
+        
         // PRIORITY 1: Raycast through blocks to find walkthrough plants
-        // Check every block position along the ray from player's eye to target
-        PlantInstance plantAlongRay = findWalkthroughPlantAlongRay(player, 5.0);
+        // BUT skip this if we're planting seeds (we want to target soil, not plants)
+        if (!isPlantingItem) {
+            // Check every block position along the ray from player's eye to target
+            plantAlongRay = findWalkthroughPlantAlongRay(player, 5.0);
+        }
         
         if (plantAlongRay != null) {
             // Found a walkthrough plant in line of sight!
