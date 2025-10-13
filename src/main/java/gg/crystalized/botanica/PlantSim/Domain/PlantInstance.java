@@ -24,6 +24,7 @@ public class PlantInstance {
     public double progress = 0.0;    // 0..1
     public boolean complete = false;
     public String currentSchematicId = null;  // Tracks the current schematic at any growth stage (if applicable)
+    public int currentStageIndex = -1;        // Tracks the current visual stage index (prevents redundant updates)
     public double fertility = 0.0;   // Bonus added to drop ranges (e.g., 2.5 = +2.5 to min/max)
     public int rotation = 0;         // 0, 90, 180, or 270 degrees (for Y-axis rotation of schematics)
 

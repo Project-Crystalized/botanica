@@ -1,6 +1,7 @@
 package gg.crystalized.botanica.PlantSim.Sim;
 
 import gg.crystalized.botanica.PlantSim.Bus.BlockMutation;
+import gg.crystalized.botanica.PlantSim.Bus.DisplayEntityMutation;
 import gg.crystalized.botanica.PlantSim.Bus.Mutation;
 import gg.crystalized.botanica.PlantSim.Bus.MutationBus;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
@@ -33,7 +34,6 @@ public final class SimulationService {
     private final MutationBus mutationBus;
     private final SchematicManager schematicManager;
     private final SchematicBlockIndex schematicBlockIndex;
-
     public SimulationService(SimulationDataManager data, SoilRepo soilRepo, MutationBus mutationBus, SchematicBlockIndex schematicBlockIndex, SchematicManager schematicManager) {
         this.data = data;
         this.soilRepo = soilRepo;
@@ -184,7 +184,12 @@ public final class SimulationService {
                 }
                 matureBlock = allStages.get(allStages.size() - 1);
             }
-            return new BlockMutation(p.pos, matureBlock != null ? matureBlock : "OAK_SAPLING", null);
+            
+            // Only return BlockMutation for non-walkthrough plants
+            // Walkthrough plants are handled by PhantomBlockManager via updatePlantGrowth
+            if (!spec.allowWalkthrough) {
+                return new BlockMutation(p.pos, matureBlock != null ? matureBlock : "OAK_SAPLING", null);
+            }
         }
 
         // Not finished: predict next wake
@@ -347,6 +352,7 @@ public final class SimulationService {
      * Supports both single-block stages and multi-block schematics.
      * Handles stage transitions by removing old schematic before placing new.
      * Combines growth stages and harvestable stages for visual progression.
+     * Only updates when the stage actually changes (prevents flickering).
      */
     private void updatePlantVisual(PlantInstance plant, PlantSpec spec, double progress, boolean complete) {
         if (spec.mutations == null || spec.mutations.stages == null || spec.mutations.stages.isEmpty()) {
@@ -360,18 +366,26 @@ public final class SimulationService {
         }
         
         int stageCount = allStages.size();
-        String blockOrSchematic;
+        int newStageIndex;
 
         if (complete || progress >= 1.0) {
-            // Use the last block/schematic for complete stage (100% progress)
-            blockOrSchematic = allStages.get(stageCount - 1);
+            // Use the last stage for complete (100% progress)
+            newStageIndex = stageCount - 1;
         } else {
             // Distribute stages across 0-99% progress (reserving 100% for complete stage)
             double stageProgress = progress * 0.99; // Scale to 0-99% to reserve last stage
-            int currentStage = Math.min(stageCount - 2, (int) (stageProgress * (stageCount - 1)));
-            currentStage = Math.max(0, currentStage); // Ensure we don't go below 0
-            blockOrSchematic = allStages.get(currentStage);
+            newStageIndex = Math.min(stageCount - 2, (int) (stageProgress * (stageCount - 1)));
+            newStageIndex = Math.max(0, newStageIndex); // Ensure we don't go below 0
         }
+        
+        // CHECK: Has the stage actually changed?
+        if (newStageIndex == plant.currentStageIndex) {
+            return; // No change, skip update to prevent flickering
+        }
+        
+        // Stage has changed, update it
+        plant.currentStageIndex = newStageIndex;
+        String blockOrSchematic = allStages.get(newStageIndex);
 
         // Determine if new stage is a schematic
         boolean newIsSchematic = blockOrSchematic.startsWith("schematic:");
@@ -389,7 +403,13 @@ public final class SimulationService {
         if (needsTransition && plant.currentSchematicId != null) {
             TreeSchematic oldSchematic = schematicManager.getSchematic(plant.currentSchematicId);
             if (oldSchematic != null) {
-                removeSchematic(plant.pos, oldSchematic, plant.rotation);
+                if (spec.allowWalkthrough) {
+                    // Walkthrough plant - queue display entity removal
+                    mutationBus.queue(DisplayEntityMutation.removeSchematic(plant.pos));
+                } else {
+                    // Real plant - remove server-side blocks
+                    removeSchematic(plant.pos, oldSchematic, plant.rotation);
+                }
                 schematicBlockIndex.unregisterSchematic(plant.pos, oldSchematic);
             }
         }
@@ -398,13 +418,25 @@ public final class SimulationService {
         if (newIsSchematic) {
             TreeSchematic newSchematic = schematicManager.getSchematic(newSchematicId);
             if (newSchematic != null) {
-                placeSchematic(plant.pos, newSchematic, plant.rotation);
+                if (spec.allowWalkthrough) {
+                    // Walkthrough plant - queue display entity creation
+                    mutationBus.queue(DisplayEntityMutation.setSchematic(plant.pos, newSchematicId, newSchematic, plant.rotation));
+                } else {
+                    // Real plant - place server-side blocks
+                    placeSchematic(plant.pos, newSchematic, plant.rotation);
+                }
                 schematicBlockIndex.registerSchematic(plant.pos, newSchematic, plant.id);
                 plant.currentSchematicId = newSchematicId;
             }
         } else {
             // Regular single block placement
-            mutationBus.queue(new BlockMutation(plant.pos, blockOrSchematic, null));
+            if (spec.allowWalkthrough) {
+                // Walkthrough plant - queue display entity creation
+                mutationBus.queue(DisplayEntityMutation.setBlock(plant.pos, blockOrSchematic));
+            } else {
+                // Real plant - place server-side block
+                mutationBus.queue(new BlockMutation(plant.pos, blockOrSchematic, null));
+            }
             plant.currentSchematicId = null;
         }
     }

@@ -38,7 +38,7 @@ public class SimulationManager {
 
     private BukkitTask periodicTask;
 
-    public SimulationManager(BotanicaSimulationConfig cfg, ExecutorService workers, MutationBus bus, PlantRepo plantRepo, SoilRepo soilRepo, WorkPlanner planner, SchematicBlockIndex schematicBlockIndex, SchematicManager schematicManager) {
+    public SimulationManager(BotanicaSimulationConfig cfg, ExecutorService workers, MutationBus bus, PlantRepo plantRepo, SoilRepo soilRepo, WorkPlanner planner, SchematicBlockIndex schematicBlockIndex, SchematicManager schematicManager, gg.crystalized.botanica.PlantSim.World.DisplayEntityManager displayEntityManager) {
         this.cfg = cfg; this.workers = workers; this.bus = bus; this.plantRepo = plantRepo; this.soilRepo = soilRepo; this.planner = planner;
         this.service = new SimulationService(dataManager, soilRepo, bus, schematicBlockIndex, schematicManager);
     }

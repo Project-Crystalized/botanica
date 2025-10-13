@@ -33,7 +33,8 @@ public class PlantCommands implements CommandExecutor {
         PlantRepo plantRepo, 
         SimulationService simulationService, 
         MutationBus mutationBus,
-        gg.crystalized.botanica.PlantSim.World.SchematicManager schematicManager
+        gg.crystalized.botanica.PlantSim.World.SchematicManager schematicManager,
+        gg.crystalized.botanica.PlantSim.World.DisplayEntityManager displayEntityManager
     ) {
         // Use the shared mutation bus that MutationApplier is watching
         this.actions = new PlantActions(data, soilRepo, plantRepo, mutationBus, schematicManager);

@@ -1,6 +1,7 @@
 package gg.crystalized.botanica.PlantSim.Actions;
 
 import gg.crystalized.botanica.PlantSim.Bus.BlockMutation;
+import gg.crystalized.botanica.PlantSim.Bus.DisplayEntityMutation;
 import gg.crystalized.botanica.PlantSim.Bus.ItemDropMutation;
 import gg.crystalized.botanica.PlantSim.Bus.MutationBus;
 import gg.crystalized.botanica.PlantSim.Bus.SoundMutation;
@@ -198,6 +199,22 @@ public class PlantActions {
         plant.lastSimAt = Instant.now();
         plant.nextUpdateAt = plant.lastSimAt.plusSeconds(1); // Wake soon for first simulation
         
+        // Place initial visual (first stage)
+        if (spec != null && spec.mutations != null && spec.mutations.stages != null && !spec.mutations.stages.isEmpty()) {
+            String firstStage = spec.mutations.stages.get(0);
+            
+            // Mark that we're starting at stage 0
+            plant.currentStageIndex = 0;
+            
+            if (spec.allowWalkthrough) {
+                // Walkthrough plant - queue display entity mutation
+                bus.queue(DisplayEntityMutation.setBlock(plantPos, firstStage));
+            } else {
+                // Real plant - place server block
+                bus.queue(new BlockMutation(plantPos, firstStage, null));
+            }
+        }
+        
         plantRepo.upsert(plant);
     }
 
@@ -308,6 +325,7 @@ public class PlantActions {
     
     /**
      * Remove visual blocks (single block or schematic) for destructive harvest.
+     * Handles both real blocks and phantom blocks based on allowWalkthrough flag.
      */
     private void removeVisualBlocks(PlantInstance plant, gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec spec) {
         if (spec.mutations != null && spec.mutations.stages != null && !spec.mutations.stages.isEmpty()) {
@@ -322,14 +340,33 @@ public class PlantActions {
             // Check if this is a schematic (starts with "schematic:")
             if (lastStage.startsWith("schematic:")) {
                 String schematicId = lastStage.substring("schematic:".length());
-                removeSchematic(plant.pos, schematicId, plant.rotation);
+                TreeSchematic schematic = schematicManager.getSchematic(schematicId);
+                if (schematic != null) {
+                    if (spec.allowWalkthrough) {
+                        // Walkthrough plant - queue display entity removal
+                        bus.queue(DisplayEntityMutation.removeSchematic(plant.pos));
+                    } else {
+                        // Real plant - remove server-side blocks
+                        removeSchematic(plant.pos, schematicId, plant.rotation);
+                    }
+                }
             } else {
-                // Regular single block - clear to AIR
-                bus.queue(new BlockMutation(plant.pos, "AIR", null));
+                // Regular single block
+                if (spec.allowWalkthrough) {
+                    // Walkthrough plant - queue display entity removal
+                    bus.queue(DisplayEntityMutation.removeBlock(plant.pos));
+                } else {
+                    // Real plant - clear to AIR
+                    bus.queue(new BlockMutation(plant.pos, "AIR", null));
+                }
             }
         } else {
-            // No visuals defined - just clear the block
-            bus.queue(new BlockMutation(plant.pos, "AIR", null));
+            // No visuals defined
+            if (spec.allowWalkthrough) {
+                bus.queue(DisplayEntityMutation.removeBlock(plant.pos));
+            } else {
+                bus.queue(new BlockMutation(plant.pos, "AIR", null));
+            }
         }
     }
     
@@ -414,7 +451,11 @@ public class PlantActions {
                         plant.pos.z() + rotated[1]
                     );
                     if (!newBlockPositions.contains(blockPos)) {
-                        bus.queue(new BlockMutation(blockPos, "AIR", null));
+                        if (spec.allowWalkthrough) {
+                            bus.queue(DisplayEntityMutation.removeBlock(blockPos));
+                        } else {
+                            bus.queue(new BlockMutation(blockPos, "AIR", null));
+                        }
                     }
                 }
             }
@@ -423,25 +464,37 @@ public class PlantActions {
         
         // SECOND: Place new stage visual (will overwrite overlapping blocks seamlessly)
         if (targetIsSchematic) {
-            // If 2nd-to-last is also a schematic (edge case)
+            // If last growth stage is also a schematic
             TreeSchematic newSchematic = schematicManager.getSchematic(targetSchematicId);
             if (newSchematic != null) {
-                for (TreeSchematic.SchematicBlock block : newSchematic.blocks()) {
-                    // Apply rotation
-                    int[] rotated = SchematicManager.rotateBlock(block.x(), block.z(), plant.rotation);
-                    BlockPos blockPos = new BlockPos(
-                        plant.pos.world(),
-                        plant.pos.x() + rotated[0],
-                        plant.pos.y() + block.y(),
-                        plant.pos.z() + rotated[1]
-                    );
-                    bus.queue(new BlockMutation(blockPos, block.material(), null));
+                if (spec.allowWalkthrough) {
+                    // Walkthrough plant - queue display entity mutation
+                    bus.queue(DisplayEntityMutation.setSchematic(plant.pos, targetSchematicId, newSchematic, plant.rotation));
+                } else {
+                    // Real plant - place server-side schematic
+                    for (TreeSchematic.SchematicBlock block : newSchematic.blocks()) {
+                        // Apply rotation
+                        int[] rotated = SchematicManager.rotateBlock(block.x(), block.z(), plant.rotation);
+                        BlockPos blockPos = new BlockPos(
+                            plant.pos.world(),
+                            plant.pos.x() + rotated[0],
+                            plant.pos.y() + block.y(),
+                            plant.pos.z() + rotated[1]
+                        );
+                        bus.queue(new BlockMutation(blockPos, block.material(), null));
+                    }
                 }
                 plant.currentSchematicId = targetSchematicId;
             }
         } else {
             // Regular block placement at root position
-            bus.queue(new BlockMutation(plant.pos, targetStage, null));
+            if (spec.allowWalkthrough) {
+                // Walkthrough plant - queue display entity mutation
+                bus.queue(DisplayEntityMutation.setBlock(plant.pos, targetStage));
+            } else {
+                // Real plant - place server-side block
+                bus.queue(new BlockMutation(plant.pos, targetStage, null));
+            }
         }
         
         // Update plant in repository

@@ -23,6 +23,7 @@ import gg.crystalized.botanica.PlantSim.UI.PlantLookupTask;
 import gg.crystalized.botanica.PlantSim.UI.PlantStatusUI;
 import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
 import gg.crystalized.botanica.PlantSim.World.PaperWorldAdapter;
+import gg.crystalized.botanica.PlantSim.World.DisplayEntityManager;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
 import org.bukkit.command.CommandExecutor;
@@ -49,6 +50,7 @@ public class Botanica extends JavaPlugin implements Listener {
     private SchematicBlockIndex schematicBlockIndex;
     private SchematicManager schematicManager;
     private BlockAliasManager aliasManager;
+    private DisplayEntityManager displayEntityManager;
     private BotanicaSimulationConfig config;
     
     // Interaction system
@@ -116,8 +118,9 @@ public class Botanica extends JavaPlugin implements Listener {
         schematicBlockIndex = new SchematicBlockIndex();
         aliasManager = new BlockAliasManager();
         schematicManager = new SchematicManager(aliasManager);
+        displayEntityManager = new DisplayEntityManager(aliasManager);
         simulationService = new SimulationService(sdm, soilRepo, mutationBus, schematicBlockIndex, schematicManager);
-        mutationApplier = new MutationApplier(mutationBus, new PaperWorldAdapter(getServer()), config.mutationCapPerTick);
+        mutationApplier = new MutationApplier(mutationBus, new PaperWorldAdapter(getServer()), displayEntityManager, config.mutationCapPerTick);
         
         // Initialize interaction system
         itemActionRegistry = new ItemActionRegistry();
@@ -127,7 +130,7 @@ public class Botanica extends JavaPlugin implements Listener {
         
         // Register event listeners
         registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config, aliasManager));
-        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver));
+        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo));
         
         // Start simulation loop
         startSimulation();
@@ -146,7 +149,7 @@ public class Botanica extends JavaPlugin implements Listener {
         );
         lookupTask.runTaskTimer(this, 0L, 10L);
 
-        registerCommand("botanica", new PlantCommands(sdm, soilRepo, plantRepo, simulationService, mutationBus, schematicManager));
+        registerCommand("botanica", new PlantCommands(sdm, soilRepo, plantRepo, simulationService, mutationBus, schematicManager, displayEntityManager));
         
         getLogger().info("Botanica plant simulation plugin enabled!");
         getLogger().info("Registered botanica command with " + (getCommand("botanica") != null ? "SUCCESS" : "FAILURE"));
@@ -157,6 +160,11 @@ public class Botanica extends JavaPlugin implements Listener {
         stopSimulation();
         if (mutationApplier != null) {
             mutationApplier.stop();
+        }
+        
+        // Clean up display entities
+        if (displayEntityManager != null) {
+            displayEntityManager.removeAll();
         }
         
         // Simulation data manager

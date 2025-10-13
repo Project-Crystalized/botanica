@@ -12,10 +12,12 @@ import gg.crystalized.botanica.PlantSim.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.RayTraceResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -63,38 +65,71 @@ public class PlantLookupTask extends BukkitRunnable {
      * Update a single player's action bar based on what they're looking at.
      */
     private void updatePlayerActionBar(Player player) {
-        // Get the block the player is looking at (max 5 blocks away)
+        // STEP 1: Check for walkthrough plants along ray (they're AIR on server)
+        PlantInstance walkthroughPlant = findWalkthroughPlantAlongRay(player, 5.0);
+        double walkthroughDistance = Double.MAX_VALUE;
+        
+        if (walkthroughPlant != null) {
+            // Calculate distance to walkthrough plant
+            Location plantLoc = new Location(
+                player.getWorld(),
+                walkthroughPlant.pos.x() + 0.5,
+                walkthroughPlant.pos.y() + 0.5,
+                walkthroughPlant.pos.z() + 0.5
+            );
+            walkthroughDistance = player.getEyeLocation().distance(plantLoc);
+        }
+        
+        // STEP 2: Get solid block target
         Block targetBlock = player.getTargetBlockExact(5);
+        double solidBlockDistance = Double.MAX_VALUE;
         
-        if (targetBlock == null) {
-            // Not looking at anything, clear action bar if we were displaying something
-            if (lastDisplayedPos.containsKey(player.getUniqueId())) {
-                player.sendActionBar(Component.empty());
-                lastDisplayedPos.remove(player.getUniqueId());
-            }
-            return;
+        if (targetBlock != null && !targetBlock.getType().isAir()) {
+            // Calculate distance to solid block
+            Location blockLoc = targetBlock.getLocation().add(0.5, 0.5, 0.5);
+            solidBlockDistance = player.getEyeLocation().distance(blockLoc);
         }
         
-        BlockPos pos = BlockPos.fromBukkitLocation(targetBlock.getLocation());
-        
-        // Check if we're still looking at the same position (optimization)
-        BlockPos lastPos = lastDisplayedPos.get(player.getUniqueId());
-        if (pos.equals(lastPos)) {
-            // Still looking at same block, but update display for changing values
-            // (fall through to display logic)
-        }
-        
-        // Try to find plant at this position (including schematic blocks)
-        PlantInstance plant = findPlantAtPosition(pos);
-        SoilInstance soil = null;
-        
-        if (plant != null) {
-            // Found a plant, get its soil
-            soil = soilRepo.get(plant.soilPos);
+        // STEP 3: Show whichever is CLOSER (walkthrough plant or solid block)
+        if (walkthroughDistance < solidBlockDistance) {
+            // Walkthrough plant is closer - show it!
+            SoilInstance soil = soilRepo.get(walkthroughPlant.soilPos);
             if (soil != null) {
-                PlantSpec spec = dataManager.plants().get(plant.speciesId);
+                PlantSpec spec = dataManager.plants().get(walkthroughPlant.speciesId);
                 if (spec != null) {
-                    Component message = actionBarUI.formatPlant(plant, spec, soil);
+                    Component message = actionBarUI.formatPlant(walkthroughPlant, spec, soil);
+                    player.sendActionBar(message);
+                    lastDisplayedPos.put(player.getUniqueId(), walkthroughPlant.pos);
+                    return;
+                }
+            }
+        } else if (solidBlockDistance < Double.MAX_VALUE) {
+            // Solid block is closer (or walkthrough plant didn't have valid data)
+            BlockPos pos = BlockPos.fromBukkitLocation(targetBlock.getLocation());
+            
+            // Try to find plant at this position (including schematic blocks)
+            PlantInstance plant = findPlantAtPosition(pos);
+            
+            if (plant != null) {
+                // Found a real plant!
+                SoilInstance soil = soilRepo.get(plant.soilPos);
+                if (soil != null) {
+                    PlantSpec spec = dataManager.plants().get(plant.speciesId);
+                    if (spec != null) {
+                        Component message = actionBarUI.formatPlant(plant, spec, soil);
+                        player.sendActionBar(message);
+                        lastDisplayedPos.put(player.getUniqueId(), pos);
+                        return;
+                    }
+                }
+            }
+            
+            // Check if it's soil
+            SoilInstance soil = soilRepo.get(pos);
+            if (soil != null) {
+                SoilSpec soilSpec = dataManager.soils().get(soil.soilId);
+                if (soilSpec != null) {
+                    Component message = actionBarUI.formatSoil(soil, soilSpec);
                     player.sendActionBar(message);
                     lastDisplayedPos.put(player.getUniqueId(), pos);
                     return;
@@ -102,19 +137,7 @@ public class PlantLookupTask extends BukkitRunnable {
             }
         }
         
-        // No plant, check for soil only
-        soil = soilRepo.get(pos);
-        if (soil != null) {
-            SoilSpec soilSpec = dataManager.soils().get(soil.soilId);
-            if (soilSpec != null) {
-                Component message = actionBarUI.formatSoil(soil, soilSpec);
-                player.sendActionBar(message);
-                lastDisplayedPos.put(player.getUniqueId(), pos);
-                return;
-            }
-        }
-        
-        // Not looking at plant or soil, clear action bar
+        // Not looking at anything, clear action bar
         if (lastDisplayedPos.containsKey(player.getUniqueId())) {
             player.sendActionBar(Component.empty());
             lastDisplayedPos.remove(player.getUniqueId());
@@ -135,6 +158,53 @@ public class PlantLookupTask extends BukkitRunnable {
         BlockPos rootPos = schematicBlockIndex.getRootPosition(pos);
         if (rootPos != null) {
             return plantRepo.get(rootPos);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Find a walkthrough plant along the player's line of sight.
+     * Traces from player's eye to the target block, checking each block position for walkthrough plants.
+     * Returns the FIRST (closest) walkthrough plant found along the ray.
+     * 
+     * @param player The player looking
+     * @param maxDistance Maximum distance to check (blocks)
+     * @return First walkthrough plant along ray, or null if none found
+     */
+    private PlantInstance findWalkthroughPlantAlongRay(Player player, double maxDistance) {
+        // Get player's eye location and direction
+        Location eyeLocation = player.getEyeLocation();
+        org.bukkit.util.Vector direction = eyeLocation.getDirection();
+        
+        String world = player.getWorld().getName();
+        
+        // Trace along the ray in small steps (0.1 block increments for accuracy)
+        double step = 0.1;
+        int maxSteps = (int) (maxDistance / step);
+        
+        for (int i = 0; i < maxSteps; i++) {
+            double distance = i * step;
+            
+            // Calculate current position along ray
+            org.bukkit.util.Vector currentPos = eyeLocation.toVector().add(direction.clone().multiply(distance));
+            
+            int x = currentPos.getBlockX();
+            int y = currentPos.getBlockY();
+            int z = currentPos.getBlockZ();
+            
+            // Check for walkthrough plant at this block position
+            BlockPos checkPos = new BlockPos(world, x, y, z);
+            PlantInstance plant = plantRepo.get(checkPos);
+            
+            if (plant != null) {
+                // Check if this plant is walkthrough
+                PlantSpec spec = dataManager.plants().get(plant.speciesId);
+                if (spec != null && spec.allowWalkthrough) {
+                    // Found a walkthrough plant along the ray!
+                    return plant;
+                }
+            }
         }
         
         return null;

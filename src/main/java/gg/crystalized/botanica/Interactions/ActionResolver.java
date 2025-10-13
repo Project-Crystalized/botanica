@@ -127,11 +127,6 @@ public class ActionResolver {
             return true; // We handled it (with error message)
         }
         
-        if (ctx.plant != null) {
-            ctx.player.sendMessage(ChatColor.YELLOW + "There's already a plant here!");
-            return true;
-        }
-        
         // Plant the seed (one block above soil)
         BlockPos plantPos = new BlockPos(
             ctx.clickedPos.world(),
@@ -139,6 +134,14 @@ public class ActionResolver {
             ctx.clickedPos.y() + 1,
             ctx.clickedPos.z()
         );
+        
+        // Check EXACT position where we're planting (not nearby!)
+        // This prevents false positives from walkthrough plants near the click position
+        PlantInstance existingAtPlantPos = findPlantAtPosition(plantPos);
+        if (existingAtPlantPos != null) {
+            ctx.player.sendMessage(ChatColor.YELLOW + "There's already a plant here!");
+            return true;
+        }
         
         plantActions.plantSeed(ctx.player.getUniqueId().toString(), stats.plantSpecId, plantPos);
         

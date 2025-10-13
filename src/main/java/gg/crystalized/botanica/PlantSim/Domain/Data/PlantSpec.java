@@ -8,8 +8,9 @@ public final class PlantSpec {
     public String kind;                // "GENERIC"/"TREE"/"FLOWER"/"VINE" (validate to enum in code)
     public double baseGrowthDuration;   // required
     public String optimalSoil;         // SoilSpec.id
-    public boolean destroyOnHarvest = true;  // If false, plant regresses to 2nd-to-last stage and regrows
+    public boolean destroyOnHarvest = true;  // If false, plant regresses to last growth stage and regrows
     public boolean allowRotation = false;    // If true, plant is randomly rotated on planting (90° increments)
+    public boolean allowWalkthrough = false; // If true, uses phantom blocks (client-side only, no collision)
     
     // Growth requirements and consumption grouped
     public GrowthFactors growthFactors;
