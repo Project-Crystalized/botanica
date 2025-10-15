@@ -10,6 +10,19 @@ public record BlockPos(String world, int x, int y, int z) {
     public BlockPos below() { return new BlockPos(world, x, y - 1, z); }
     public BlockPos above() { return new BlockPos(world, x, y + 1, z); }
     
+    public BlockPos north() { return new BlockPos(world, x, y, z - 1); }
+    public BlockPos south() { return new BlockPos(world, x, y, z + 1); }
+    public BlockPos east() { return new BlockPos(world, x + 1, y, z); }
+    public BlockPos west() { return new BlockPos(world, x - 1, y, z); }
+    
+    public Location toBukkitLocation() {
+        org.bukkit.World bukkitWorld = org.bukkit.Bukkit.getWorld(world);
+        if (bukkitWorld == null) {
+            return null;
+        }
+        return new Location(bukkitWorld, x, y, z);
+    }
+    
     public static BlockPos fromBukkitLocation(Location location) {
         return new BlockPos(
             location.getWorld().getName(),

@@ -292,7 +292,7 @@ public final class SimulationService {
 
         return new SoilInstance(
             soil.pos, soil.soilId, soil.qualityMult,
-            newWater, soil.nutrients, now
+            newWater, soil.nutrients, soil.tilled, now
         );
     }
 
@@ -332,7 +332,7 @@ public final class SimulationService {
 
             SoilInstance updatedSoil = new SoilInstance(
                 soil.pos, soil.soilId, soil.qualityMult,
-                newWater, newNutrients, now
+                newWater, newNutrients, soil.tilled, now
             );
             soilRepo.upsert(updatedSoil);
         }
@@ -511,5 +511,14 @@ public final class SimulationService {
         Instant best = null;
         for (Instant t : times) if (t != null && (best == null || t.isBefore(best))) best = t;
         return best;
+    }
+    
+    /**
+     * Get a soil spec by its ID.
+     * @param soilId The soil ID (e.g., "PLAIN", "SANDY")
+     * @return SoilSpec or null if not found
+     */
+    public SoilSpec getSoilSpecById(String soilId) {
+        return data.soils().get(soilId);
     }
 }

@@ -64,7 +64,7 @@ public class PlantActions {
         // Create or update soil instance
         SoilInstance soil = soilRepo.get(pos);
         if (soil == null) {
-            soil = new SoilInstance(pos, soilId, qualityMult, 50.0, 50.0, now); // Default levels
+            soil = new SoilInstance(pos, soilId, qualityMult, 50.0, 50.0, true, now); // Default levels, tilled
         } else {
             soil.soilId = soilId;
             soil.qualityMult = qualityMult;
@@ -78,6 +78,7 @@ public class PlantActions {
         
         // Update visual block with soil's block type
         bus.queue(new BlockMutation(pos, soilSpec.block, null));
+        
         
         // Play hoe sound
         bus.queue(new SoundMutation(pos, "item.hoe.till", 1.0f, 1.0f));

@@ -12,17 +12,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Manages friendly aliases for block states.
+ * Manages friendly aliases for block states and item custom model data.
  * Allows schematics to use short names (e.g., "oak_leaves_full_0_0") 
  * instead of verbose block state syntax (e.g., "BROWN_MUSHROOM_BLOCK[north=true,...]").
+ * Also manages item aliases for base materials (e.g., "soil_bucket" -> "FLINT").
  */
 public class BlockAliasManager {
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final Map<String, String> aliases = new HashMap<>();
+    private final Map<String, String> blockAliases = new HashMap<>();
+    private final Map<String, String> itemAliases = new HashMap<>();
     private final File aliasFile;
 
     public BlockAliasManager() {
-        aliasFile = new File(Botanica.INSTANCE.getDataFolder(), "sim/BlockAliases.json");
+        aliasFile = new File(Botanica.INSTANCE.getDataFolder(), "sim/ResourcePackAliases.json");
         loadAliases();
     }
 
@@ -35,27 +37,46 @@ public class BlockAliasManager {
      * @return Resolved block state string
      */
     public String resolve(String blockName) {
-        return aliases.getOrDefault(blockName, blockName);
+        return blockAliases.getOrDefault(blockName, blockName);
+    }
+    
+    /**
+     * Get the base material for an item alias.
+     * If the name is an item alias, returns the mapped material.
+     * Otherwise, returns null.
+     * 
+     * @param itemName Item alias (e.g., "soil_bucket")
+     * @return Base material string or null
+     */
+    public String resolveItemMaterial(String itemName) {
+        return itemAliases.get(itemName);
     }
 
     /**
-     * Load aliases from BlockAliases.json
+     * Load aliases from ResourcePackAliases.json
      */
     private void loadAliases() {
         if (!aliasFile.exists()) {
-            Botanica.INSTANCE.getLogger().warning("BlockAliases.json not found at: " + aliasFile.getAbsolutePath());
+            Botanica.INSTANCE.getLogger().warning("ResourcePackAliases.json not found at: " + aliasFile.getAbsolutePath());
             return;
         }
 
         try (FileReader reader = new FileReader(aliasFile)) {
             AliasConfig config = gson.fromJson(reader, AliasConfig.class);
-            if (config != null && config.aliases != null) {
-                aliases.clear();
-                aliases.putAll(config.aliases);
-                Botanica.INSTANCE.getLogger().info("Loaded " + aliases.size() + " block aliases");
+            if (config != null) {
+                if (config.blockAliases != null) {
+                    blockAliases.clear();
+                    blockAliases.putAll(config.blockAliases);
+                    Botanica.INSTANCE.getLogger().info("Loaded " + blockAliases.size() + " block aliases");
+                }
+                if (config.itemAliases != null) {
+                    itemAliases.clear();
+                    itemAliases.putAll(config.itemAliases);
+                    Botanica.INSTANCE.getLogger().info("Loaded " + itemAliases.size() + " item aliases");
+                }
             }
         } catch (IOException e) {
-            Botanica.INSTANCE.getLogger().severe("Error loading BlockAliases.json: " + e.getMessage());
+            Botanica.INSTANCE.getLogger().severe("Error loading ResourcePackAliases.json: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -68,11 +89,14 @@ public class BlockAliasManager {
     }
 
     /**
-     * Config structure for BlockAliases.json
+     * Config structure for ResourcePackAliases.json
      */
     private static class AliasConfig {
-        @SerializedName("aliases")
-        Map<String, String> aliases;
+        @SerializedName("blockAliases")
+        Map<String, String> blockAliases;
+        
+        @SerializedName("itemAliases")
+        Map<String, String> itemAliases;
     }
 }
 

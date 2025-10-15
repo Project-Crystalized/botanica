@@ -19,6 +19,7 @@ public interface SoilRepo {
     // Synchronous methods for immediate access
     SoilInstance get(BlockPos pos);
     void upsert(SoilInstance soil);
+    void delete(BlockPos pos);
 
     // Convenience helpers (optional to include in the interface)
     default Optional<SoilInstance> findByPosition(BlockPos pos) {

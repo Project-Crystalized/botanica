@@ -47,7 +47,9 @@ public class ItemActionRegistry {
             ItemActionConfig config = gson.fromJson(reader, ItemActionConfig.class);
             if (config != null) {
                 int totalItems = 0;
-                totalItems += loadTillSoil(config.TILL_SOIL);
+                if (config.TILL_SOIL != null) {
+                    totalItems += loadTillSoil(config.TILL_SOIL);
+                }
                 totalItems += loadHarvestPlant(config.HARVEST_PLANT);
                 totalItems += loadPlant(config.PLANT);
                 totalItems += loadResourceAction("ADD_WATER", config.ADD_WATER);
@@ -218,20 +220,13 @@ public class ItemActionRegistry {
         
         // Documentation
         defaultConfig._documentation = Map.of(
-            "actions", List.of("TILL_SOIL", "HARVEST_PLANT", "PLANT", "ADD_WATER", "REMOVE_WATER", "ADD_NUTRIENTS", "REMOVE_NUTRIENTS"),
+            "actions", List.of("HARVEST_PLANT", "PLANT", "ADD_WATER", "REMOVE_WATER", "ADD_NUTRIENTS", "REMOVE_NUTRIENTS"),
             "note", "Actions are grouped as top-level keys. Add items under each action with relevant fields.",
             "consume", "If true, removes 1 from held item stack. If false, keeps item (for tools/reusable items - default true).",
             "give", "Item to add to player inventory after action (e.g., empty bucket after using water bucket - default null)."
         );
         
-        // TILL_SOIL: Hoes (tools, not consumed)
-        ItemActionConfig.TillSoilItem woodHoe = createTillSoil("WOODEN_HOE", 0.8, 1.0);
-        woodHoe.consume = false;
-        woodHoe.give = null;
-        ItemActionConfig.TillSoilItem diamondHoe = createTillSoil("DIAMOND_HOE", 1.2, 1.5);
-        diamondHoe.consume = false;
-        diamondHoe.give = null;
-        defaultConfig.TILL_SOIL = List.of(woodHoe, diamondHoe);
+        // Note: TILL_SOIL is now handled directly in PlayerInteractListener for custom soil blocks
         
         // HARVEST_PLANT: Same hoes (tools, not consumed)
         ItemActionConfig.HarvestPlantItem woodHoeHarvest = createHarvest("WOODEN_HOE");
@@ -280,13 +275,6 @@ public class ItemActionRegistry {
         }
     }
     
-    private ItemActionConfig.TillSoilItem createTillSoil(String itemId, double qualityMin, double qualityMax) {
-        ItemActionConfig.TillSoilItem item = new ItemActionConfig.TillSoilItem();
-        item.itemId = itemId;
-        item.qualityMin = qualityMin;
-        item.qualityMax = qualityMax;
-        return item;
-    }
     
     private ItemActionConfig.HarvestPlantItem createHarvest(String itemId) {
         ItemActionConfig.HarvestPlantItem item = new ItemActionConfig.HarvestPlantItem();

@@ -48,4 +48,13 @@ public final class LocalSoilRepo implements SoilRepo {
     public void upsert(SoilInstance soil) {
         byChunk.computeIfAbsent(soil.chunk, k -> new ConcurrentHashMap<>()).put(soil.pos, soil);
     }
+    
+    @Override
+    public void delete(BlockPos pos) {
+        ChunkRef chunk = ChunkRef.of(pos);
+        Map<BlockPos, SoilInstance> m = byChunk.get(chunk);
+        if (m != null) {
+            m.remove(pos);
+        }
+    }
 }

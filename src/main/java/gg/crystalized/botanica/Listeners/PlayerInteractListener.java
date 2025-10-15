@@ -3,9 +3,15 @@ package gg.crystalized.botanica.Listeners;
 import gg.crystalized.botanica.Interactions.ActionResolver;
 import gg.crystalized.botanica.Interactions.InteractionContext;
 import gg.crystalized.botanica.Interactions.ItemActionRegistry;
+import gg.crystalized.botanica.PlantSim.Actions.PlantActions;
+import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBucketData;
+import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBlockData;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
+import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
+import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -14,6 +20,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -30,11 +37,17 @@ public class PlayerInteractListener implements Listener {
     private final ItemActionRegistry registry;
     private final ActionResolver resolver;
     private final PlantRepo plantRepo;
+    private final SoilRepo soilRepo;
+    private final PlantActions plantActions;
+    private final BlockAliasManager aliasManager;
     
-    public PlayerInteractListener(ItemActionRegistry registry, ActionResolver resolver, PlantRepo plantRepo) {
+    public PlayerInteractListener(ItemActionRegistry registry, ActionResolver resolver, PlantRepo plantRepo, SoilRepo soilRepo, PlantActions plantActions, BlockAliasManager aliasManager) {
         this.registry = registry;
         this.resolver = resolver;
         this.plantRepo = plantRepo;
+        this.soilRepo = soilRepo;
+        this.plantActions = plantActions;
+        this.aliasManager = aliasManager;
     }
     
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -45,6 +58,11 @@ public class PlayerInteractListener implements Listener {
         // Validate basic interaction
         if (item == null) {
             return;
+        }
+        
+        // PRIORITY 0: Handle soil bucket interactions (empty bucket pickup / filled bucket placement)
+        if (handleSoilBucketInteraction(event, player, item)) {
+            return; // Bucket interaction handled, skip normal action resolution
         }
         
         // Check if this item has registered actions
@@ -64,6 +82,12 @@ public class PlayerInteractListener implements Listener {
         if (!isPlantingItem) {
             // Check every block position along the ray from player's eye to target
             plantAlongRay = findWalkthroughPlantAlongRay(player, 5.0);
+        }
+        
+        // PRIORITY 1.5: Handle hoe tilling interactions (only if holding a hoe AND no walkable plant found)
+        // This ensures walkable plants take priority over soil blocks
+        if (isHoe(item.getType()) && plantAlongRay == null && handleHoeTilling(event, player, item)) {
+            return; // Hoe tilling handled, skip normal action resolution
         }
         
         if (plantAlongRay != null) {
@@ -177,5 +201,382 @@ public class PlayerInteractListener implements Listener {
         
         return null;
     }
+    
+    /**
+     * Handle soil bucket interactions (empty bucket pickup / filled bucket placement).
+     * @return true if interaction was handled, false to continue with normal action resolution
+     */
+    private boolean handleSoilBucketInteraction(PlayerInteractEvent event, Player player, ItemStack item) {
+        // Only handle right-click block interactions
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
+            return false;
+        }
+        
+        Block clickedBlock = event.getClickedBlock();
+        
+        // Handle empty bucket (pickup soil)
+        if (SoilBucketData.isEmptyBucket(item)) {
+            return handleEmptyBucketPickup(event, player, item, clickedBlock);
+        }
+        
+        // Handle filled soil bucket (place soil)
+        if (SoilBucketData.isSoilBucket(item)) {
+            return handleFilledBucketPlacement(event, player, item, clickedBlock);
+        }
+        
+        return false; // Not a bucket interaction
+    }
+    
+    /**
+     * Handle empty bucket pickup of existing soil.
+     */
+    private boolean handleEmptyBucketPickup(PlayerInteractEvent event, Player player, ItemStack emptyBucket, Block clickedBlock) {
+        // Check if clicked block is a custom soil block
+        if (!SoilBlockData.isCustomSoilBlock(clickedBlock)) {
+            return false; // Not a custom soil block, don't handle
+        }
+        
+        // Extract soil data from the block
+        SoilBucketData soilData = SoilBlockData.extractFromBlock(clickedBlock);
+        if (soilData == null) {
+            return false; // Couldn't extract soil data
+        }
+        
+        // Create filled bucket with soil data using the convenient wrapper method
+        ItemStack filledBucket = SoilBucketData.createSoilBucket(
+            soilData.getSoilType(),
+            soilData.getSecondaryPercentage(),
+            aliasManager
+        );
+        
+        // Replace empty bucket with filled bucket in inventory
+        if (emptyBucket.getAmount() > 1) {
+            // Stack has multiple buckets, remove one and add filled bucket
+            emptyBucket.setAmount(emptyBucket.getAmount() - 1);
+            player.getInventory().addItem(filledBucket);
+        } else {
+            // Single bucket, replace it
+            player.getInventory().setItemInMainHand(filledBucket);
+        }
+        
+        // Remove the soil block
+        clickedBlock.setType(Material.AIR);
+        
+        // Remove the soil instance from simulation
+        BlockPos pos = BlockPos.fromBukkitLocation(clickedBlock.getLocation());
+        soilRepo.delete(pos); // Remove from simulation
+        
+        // Play pickup sound
+        player.playSound(clickedBlock.getLocation(), "item.bucket.fill", 1.0f, 1.0f);
+        
+        event.setCancelled(true);
+        return true;
+    }
+    
+    /**
+     * Handle filled soil bucket placement.
+     */
+    private boolean handleFilledBucketPlacement(PlayerInteractEvent event, Player player, ItemStack filledBucket, Block clickedBlock) {
+        // Extract soil data from bucket
+        SoilBucketData bucketData = SoilBucketData.fromBucket(filledBucket);
+        if (bucketData == null) {
+            return false; // Invalid bucket data
+        }
+        
+        // Determine where to place the soil block (like normal block placement)
+        Block targetBlock = getPlacementBlock(event, clickedBlock);
+        if (targetBlock == null) {
+            return false; // Can't place here
+        }
+        
+        // Check if the target location is available for placement
+        if (targetBlock.getType() != Material.AIR && !isReplaceableBlock(targetBlock)) {
+            return false; // Can't place here
+        }
+        
+        // Get the appropriate block alias for this soil data
+        String blockAlias = SoilBlockData.getBlockAliasForSoilData(bucketData, false); // Start with untilled
+        if (blockAlias == null) {
+            return false; // Couldn't determine block to place
+        }
+        
+        // Resolve the block alias to actual block data
+        String resolvedBlock = aliasManager.resolve(blockAlias);
+        if (resolvedBlock == null) {
+            return false; // Couldn't resolve block alias
+        }
+        
+        // Parse and place the custom block at the target location
+        placeCustomBlock(targetBlock, resolvedBlock);
+        
+        // Store the soil data in the placed block's memory map
+        SoilBlockData.storeSoilDataInBlock(targetBlock, bucketData);
+        
+        // Create SoilInstance for simulation (untilled by default)
+        createSoilInstance(targetBlock, bucketData);
+        
+        // Convert filled bucket back to empty bucket
+        if (filledBucket.getAmount() > 1) {
+            // Stack has multiple buckets, remove one and add empty bucket
+            filledBucket.setAmount(filledBucket.getAmount() - 1);
+            player.getInventory().addItem(new ItemStack(Material.BUCKET));
+        } else {
+            // Single bucket, replace it with empty bucket
+            player.getInventory().setItemInMainHand(new ItemStack(Material.BUCKET));
+        }
+        
+        // Play placement sound
+        player.playSound(clickedBlock.getLocation(), "item.bucket.empty", 1.0f, 1.0f);
+        
+        event.setCancelled(true);
+        return true;
+    }
+    
+    /**
+     * Place a custom block using the resolved block data string.
+     */
+    private void placeCustomBlock(Block block, String resolvedBlock) {
+        // Parse block data similar to DisplayEntityManager
+        String baseMaterial = resolvedBlock;
+        String blockStates = null;
+        
+        int bracketIndex = resolvedBlock.indexOf('[');
+        if (bracketIndex != -1) {
+            baseMaterial = resolvedBlock.substring(0, bracketIndex);
+            blockStates = resolvedBlock.substring(bracketIndex + 1, resolvedBlock.length() - 1);
+        }
+        
+        // Get Material enum
+        Material material = Material.matchMaterial(baseMaterial);
+        if (material == null) {
+            material = Material.DIRT; // Fallback
+        }
+        
+        // Create BlockData with states if present
+        org.bukkit.block.data.BlockData blockData;
+        try {
+            if (blockStates != null && !blockStates.isEmpty()) {
+                blockData = org.bukkit.Bukkit.createBlockData(material, "[" + blockStates + "]");
+            } else {
+                blockData = material.createBlockData();
+            }
+        } catch (IllegalArgumentException e) {
+            // Invalid block state syntax, fallback to default state
+            blockData = material.createBlockData();
+        }
+        
+        // Set the block with the custom data
+        block.setBlockData(blockData);
+    }
+    
+    /**
+     * Determine where to place a block based on the interaction.
+     * This mimics vanilla block placement logic.
+     */
+    private Block getPlacementBlock(PlayerInteractEvent event, Block clickedBlock) {
+        // If clicking on the top face of a block, place above it
+        if (event.getBlockFace() == org.bukkit.block.BlockFace.UP) {
+            return clickedBlock.getRelative(org.bukkit.block.BlockFace.UP);
+        }
+        // If clicking on the side or bottom of a block, place adjacent to it
+        else {
+            return clickedBlock.getRelative(event.getBlockFace());
+        }
+    }
+    
+    /**
+     * Check if a block can be replaced when placing soil.
+     */
+    private boolean isReplaceableBlock(Block block) {
+        return block.getType() == Material.AIR || 
+               block.getType() == Material.GRASS_BLOCK || 
+               block.getType() == Material.TALL_GRASS ||
+               block.getType() == Material.FERN ||
+               block.getType() == Material.LARGE_FERN;
+    }
+    
+    /**
+     * Prevent mushroom block auto-orientation for our custom soil blocks.
+     * This cancels BlockPhysicsEvent for mushroom blocks to prevent them from
+     * automatically changing their directional states based on neighbors.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockPhysics(BlockPhysicsEvent event) {
+        Block block = event.getBlock();
+        
+        // Cancel physics updates for mushroom blocks (our custom soil blocks)
+        if (block.getType() == Material.MUSHROOM_STEM || 
+            block.getType() == Material.RED_MUSHROOM_BLOCK || 
+            block.getType() == Material.BROWN_MUSHROOM_BLOCK) {
+            event.setCancelled(true);
+        }
+    }
+    
+    /**
+     * Handle hoe tilling interactions on soil blocks.
+     * @return true if interaction was handled, false otherwise
+     */
+    private boolean handleHoeTilling(PlayerInteractEvent event, Player player, ItemStack hoe) {
+        // Only handle right-click block events
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
+            return false;
+        }
+        
+        Block clickedBlock = event.getClickedBlock();
+        
+        // Check if this is one of our custom soil blocks
+        if (!SoilBlockData.isCustomSoilBlock(clickedBlock)) {
+            return false; // Not our soil block, let other handlers deal with it
+        }
+        
+        // Get the soil instance
+        BlockPos pos = BlockPos.fromBukkitLocation(clickedBlock.getLocation());
+        SoilInstance soil = soilRepo.get(pos);
+        
+        if (soil == null) {
+            // No soil instance found, this shouldn't happen for custom soil blocks
+            // But don't show error message - just let the interaction pass through
+            return false;
+        }
+        
+        // Check if there's a harvestable plant on this soil block
+        BlockPos plantPos = new BlockPos(pos.world(), pos.x(), pos.y() + 1, pos.z());
+        PlantInstance plantOnSoil = plantRepo.get(plantPos);
+        
+        boolean harvestedPlant = false;
+        if (plantOnSoil != null && isPlantHarvestable(plantOnSoil)) {
+            // Harvest the plant first
+            harvestedPlant = attemptHarvestPlant(player, plantOnSoil, hoe);
+        }
+        
+        // Check if already tilled (only show message if no plant was harvested)
+        if (soil.tilled && !harvestedPlant) {
+            player.sendMessage("§eThis soil is already tilled and ready for planting!");
+            return true;
+        }
+        
+        // Till the soil (if not already tilled)
+        if (!soil.tilled) {
+            soil.tilled = true;
+            soil.lastUpdateAt = java.time.Instant.now();
+            soilRepo.upsert(soil);
+            
+            // Update the visual block to tilled variant
+            updateSoilBlockVisual(clickedBlock, soil, true);
+            
+            // Play tilling sound and effect
+            player.playSound(clickedBlock.getLocation(), "item.hoe.till", 1.0f, 1.0f);
+            player.sendMessage("§aSoil tilled! Ready for planting.");
+        } else if (harvestedPlant) {
+            // Soil was already tilled, but we harvested a plant
+            player.sendMessage("§aPlant harvested and soil is ready for planting!");
+        }
+        
+        event.setCancelled(true);
+        return true;
+    }
+    
+    /**
+     * Check if a plant is ready for harvesting.
+     * @return true if plant is harvestable, false otherwise
+     */
+    private boolean isPlantHarvestable(PlantInstance plant) {
+        // Simple check: plant is harvestable if it's complete or has full progress
+        return plant.complete || plant.progress >= 1.0;
+    }
+    
+    /**
+     * Attempt to harvest a plant using a hoe.
+     * @return true if plant was successfully harvested, false otherwise
+     */
+    private boolean attemptHarvestPlant(Player player, PlantInstance plant, ItemStack hoe) {
+        // Check if the plant is actually harvestable
+        if (!isPlantHarvestable(plant)) {
+            return false;
+        }
+        
+        // Calculate loot level from hoe enchantments (for now, just use 0)
+        double lootLevel = 0.0; // TODO: Add enchantment-based loot level calculation
+        
+        // Use the existing harvest logic from PlantActions
+        boolean success = plantActions.harvestPlant(plant.pos, lootLevel);
+        
+        if (success) {
+            player.sendMessage("§aPlant harvested!");
+            // Play harvest sound
+            player.playSound(plant.pos.toBukkitLocation(), "block.crop.break", 1.0f, 1.0f);
+        }
+        
+        return success;
+    }
+    
+    /**
+     * Check if a material is a hoe.
+     */
+    private boolean isHoe(Material material) {
+        return material == Material.WOODEN_HOE ||
+               material == Material.STONE_HOE ||
+               material == Material.IRON_HOE ||
+               material == Material.GOLDEN_HOE ||
+               material == Material.DIAMOND_HOE ||
+               material == Material.NETHERITE_HOE;
+    }
+    
+    /**
+     * Update the visual block to match the soil state (tilled or untilled).
+     */
+    private void updateSoilBlockVisual(Block block, SoilInstance soil, boolean tilled) {
+        // Get the soil data from the block
+        SoilBucketData soilData = SoilBlockData.extractFromBlock(block);
+        if (soilData == null) {
+            return;
+        }
+        
+        // Determine the appropriate block alias for the soil state
+        String blockAlias = SoilBlockData.getBlockAliasForSoilData(soilData, tilled);
+        if (blockAlias == null) {
+            return;
+        }
+        
+        // Resolve and place the block
+        String resolvedBlock = aliasManager.resolve(blockAlias);
+        if (resolvedBlock != null) {
+            placeCustomBlock(block, resolvedBlock);
+        }
+    }
+    
+    /**
+     * Create a SoilInstance for the placed soil block.
+     * This connects our custom soil blocks with the simulation system.
+     */
+    private void createSoilInstance(Block block, SoilBucketData bucketData) {
+        BlockPos pos = BlockPos.fromBukkitLocation(block.getLocation());
+        
+        // Get existing soil instance or create new one
+        SoilInstance soil = soilRepo.get(pos);
+        if (soil == null) {
+            // Create new soil instance (untilled by default)
+            soil = new SoilInstance(
+                pos, 
+                bucketData.getSoilType(), 
+                bucketData.getSecondaryPercentage(), // Use secondary percentage as quality multiplier
+                50.0, // Default water level
+                50.0, // Default nutrient level
+                false, // Not tilled yet
+                java.time.Instant.now()
+            );
+        } else {
+            // Update existing soil instance
+            soil.soilId = bucketData.getSoilType();
+            soil.qualityMult = bucketData.getSecondaryPercentage();
+            soil.lastUpdateAt = java.time.Instant.now();
+        }
+        
+        // Set next update for evaporation
+        soil.nextUpdateAt = java.time.Instant.now().plusSeconds(15); // Safety wake
+        
+        soilRepo.upsert(soil);
+    }
+    
 }
 

@@ -12,16 +12,18 @@ public class SoilInstance {
     public double qualityMult;       // per-tile growth speed multiplier, default 1.0
     public double water;             // 0..100
     public double nutrients;         // 0..100
+    public boolean tilled;           // whether soil is prepared for planting
     public Instant nextUpdateAt;
     public Instant lastUpdateAt;
 
-    public SoilInstance(BlockPos pos, String soilId, double qualityMult, double water, double nutrients, Instant now) {
+    public SoilInstance(BlockPos pos, String soilId, double qualityMult, double water, double nutrients, boolean tilled, Instant now) {
         this.pos = pos;
         this.chunk = ChunkRef.of(pos);
         this.soilId = soilId;
         this.qualityMult = qualityMult;
         this.water = water;
         this.nutrients = nutrients;
+        this.tilled = tilled;
         this.nextUpdateAt = now;
         this.lastUpdateAt = now;
     }

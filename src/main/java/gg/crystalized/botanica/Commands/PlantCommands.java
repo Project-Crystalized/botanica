@@ -6,17 +6,24 @@ import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
+import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
+import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBlockData;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationService;
 import gg.crystalized.botanica.PlantSim.UI.PlantStatusUI;
 import gg.crystalized.botanica.PlantSim.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 public class PlantCommands implements CommandExecutor {
     private final PlantActions actions;
@@ -26,6 +33,7 @@ public class PlantCommands implements CommandExecutor {
     private final SchematicBlockIndex schematicBlockIndex;
     private final SimulationDataManager dataManager;
     private final gg.crystalized.botanica.PlantSim.World.SchematicManager schematicManager;
+    private final gg.crystalized.botanica.PlantSim.World.BlockAliasManager aliasManager;
 
     public PlantCommands(
         SimulationDataManager data, 
@@ -34,7 +42,8 @@ public class PlantCommands implements CommandExecutor {
         SimulationService simulationService, 
         MutationBus mutationBus,
         gg.crystalized.botanica.PlantSim.World.SchematicManager schematicManager,
-        gg.crystalized.botanica.PlantSim.World.DisplayEntityManager displayEntityManager
+        gg.crystalized.botanica.PlantSim.World.DisplayEntityManager displayEntityManager,
+        gg.crystalized.botanica.PlantSim.World.BlockAliasManager aliasManager
     ) {
         // Use the shared mutation bus that MutationApplier is watching
         this.actions = new PlantActions(data, soilRepo, plantRepo, mutationBus, schematicManager);
@@ -44,6 +53,7 @@ public class PlantCommands implements CommandExecutor {
         this.schematicBlockIndex = simulationService.getSchematicBlockIndex();
         this.dataManager = data;
         this.schematicManager = schematicManager;
+        this.aliasManager = aliasManager;
     }
 
     @Override
@@ -174,6 +184,42 @@ public class PlantCommands implements CommandExecutor {
                 }
             }
             
+            case "soilgive" -> {
+                // Give soil block with specific type and percentage
+                if (args.length < 3) {
+                    player.sendMessage(ChatColor.RED + "Usage: /botanica soilgive <type> <percentage> [tilled]");
+                    player.sendMessage(ChatColor.GRAY + "Example: /botanica soilgive SANDY 80 true");
+                    return true;
+                }
+                
+                String soilType = args[1].toUpperCase();
+                double percentage = Double.parseDouble(args[2]) / 100.0; // Convert to 0-1 range
+                boolean tilled = args.length > 3 && args[3].equalsIgnoreCase("true");
+                
+                // Get soil spec
+                SoilSpec soilSpec = dataManager.soils().get(soilType);
+                if (soilSpec == null) {
+                    player.sendMessage(ChatColor.RED + "Unknown soil type: " + soilType);
+                    return true;
+                }
+                
+                // Get the appropriate block alias
+                String blockAlias = soilSpec.getBlockForPercentage(percentage, tilled);
+                if (blockAlias == null) {
+                    player.sendMessage(ChatColor.RED + "No block found for " + soilType + " at " + (percentage * 100) + "%");
+                    return true;
+                }
+                
+                // Create filled soil bucket instead of block item
+                String bucketItemId = soilSpec.bucketItemId;
+                ItemStack soilBucket = gg.crystalized.botanica.PlantSim.Domain.Data.SoilBucketData.createFilledBucket(bucketItemId, soilType, percentage, aliasManager);
+                player.getInventory().addItem(soilBucket);
+                
+                player.sendMessage(ChatColor.GREEN + "Gave bucket of " + soilType + " soil (" + 
+                    String.format("%.1f", percentage * 100) + "%" + 
+                    (tilled ? ", tilled" : "") + ")");
+            }
+            
             default -> {
                 showHelp(player);
             }
@@ -234,6 +280,89 @@ public class PlantCommands implements CommandExecutor {
         return null; // No plant found
     }
 
+    /**
+     * Create a soil block item with NBT data storing the soil composition
+     */
+    private ItemStack createSoilBlockItem(String blockAlias, String soilType, double secondaryPercentage) {
+        // Get the actual block material from the alias
+        String resolvedBlock = aliasManager.resolve(blockAlias);
+        
+        // Parse block data similar to DisplayEntityManager
+        String baseMaterial = resolvedBlock;
+        String blockStates = null;
+        
+        int bracketIndex = resolvedBlock.indexOf('[');
+        if (bracketIndex != -1) {
+            baseMaterial = resolvedBlock.substring(0, bracketIndex);
+            blockStates = resolvedBlock.substring(bracketIndex + 1, resolvedBlock.length() - 1);
+        }
+        
+        // Get Material enum
+        Material material = Material.matchMaterial(baseMaterial);
+        if (material == null) {
+            material = Material.DIRT; // Fallback
+        }
+        
+        // Create BlockData with states if present
+        org.bukkit.block.data.BlockData blockData;
+        try {
+            if (blockStates != null && !blockStates.isEmpty()) {
+                blockData = org.bukkit.Bukkit.createBlockData(material, "[" + blockStates + "]");
+            } else {
+                blockData = material.createBlockData();
+            }
+        } catch (IllegalArgumentException e) {
+            // Invalid block state syntax, fallback to default state
+            blockData = material.createBlockData();
+        }
+        
+        ItemStack item = new ItemStack(blockData.getMaterial());
+        
+        // Set the block data on the item
+        if (item.getItemMeta() instanceof org.bukkit.inventory.meta.BlockDataMeta blockDataMeta) {
+            blockDataMeta.setBlockData(blockData);
+            item.setItemMeta(blockDataMeta);
+        }
+        
+        ItemMeta meta = item.getItemMeta();
+        
+        if (meta != null) {
+            // Set generic display name
+            String displayName = soilType + " Soil";
+            meta.setDisplayName(ChatColor.GREEN + displayName);
+            
+            // Add lore with detailed composition
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            lore.add(ChatColor.GRAY + "Composition:");
+            // Get proper material name for lore
+            String materialName = switch (soilType) {
+                case "PLAIN" -> "Dirt";
+                case "SANDY" -> "Sand";
+                case "CLAY" -> "Clay";
+                case "LOAMY" -> "Loam";
+                default -> soilType;
+            };
+            lore.add(ChatColor.YELLOW + "• " + String.format("%.1f", secondaryPercentage * 100) + "% " + materialName);
+            lore.add(ChatColor.YELLOW + "• " + String.format("%.1f", (1.0 - secondaryPercentage) * 100) + "% Dirt");
+            lore.add("");
+            lore.add(ChatColor.DARK_GRAY + "Place on ground to create soil");
+            meta.setLore(lore);
+            
+            // Store soil data in NBT
+            NamespacedKey soilTypeKey = new NamespacedKey(gg.crystalized.botanica.Botanica.INSTANCE, "soil_type");
+            NamespacedKey secondaryContentKey = new NamespacedKey(gg.crystalized.botanica.Botanica.INSTANCE, "secondary_content");
+            NamespacedKey blockAliasKey = new NamespacedKey(gg.crystalized.botanica.Botanica.INSTANCE, "block_alias");
+            
+            meta.getPersistentDataContainer().set(soilTypeKey, PersistentDataType.STRING, soilType);
+            meta.getPersistentDataContainer().set(secondaryContentKey, PersistentDataType.DOUBLE, secondaryPercentage);
+            meta.getPersistentDataContainer().set(blockAliasKey, PersistentDataType.STRING, blockAlias);
+            
+            item.setItemMeta(meta);
+        }
+        
+        return item;
+    }
+
     private void showHelp(Player player) {
         player.sendMessage(ChatColor.YELLOW + "=== Botanica Commands ===");
         player.sendMessage(ChatColor.GRAY + "All commands target the block you're looking at!");
@@ -245,6 +374,7 @@ public class PlantCommands implements CommandExecutor {
         player.sendMessage(ChatColor.WHITE + "/botanica harvest [loot_level] - Harvest mature plant");
         player.sendMessage(ChatColor.WHITE + "/botanica status - Show plant status (look at plant)");
         player.sendMessage(ChatColor.WHITE + "/botanica soil - Show soil status (look at soil or plant)");
+        player.sendMessage(ChatColor.WHITE + "/botanica soilgive <type> <percentage> [tilled] - Give soil block");
         player.sendMessage(ChatColor.WHITE + "/botanica reload - Hot-reload all specs and schematics");
     }
 }

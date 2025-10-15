@@ -130,7 +130,7 @@ public class Botanica extends JavaPlugin implements Listener {
         
         // Register event listeners
         registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config, aliasManager));
-        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo));
+        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo, soilRepo, plantActions, aliasManager));
         
         // Start simulation loop
         startSimulation();
@@ -149,7 +149,7 @@ public class Botanica extends JavaPlugin implements Listener {
         );
         lookupTask.runTaskTimer(this, 0L, 10L);
 
-        registerCommand("botanica", new PlantCommands(sdm, soilRepo, plantRepo, simulationService, mutationBus, schematicManager, displayEntityManager));
+        registerCommand("botanica", new PlantCommands(sdm, soilRepo, plantRepo, simulationService, mutationBus, schematicManager, displayEntityManager, aliasManager));
         
         getLogger().info("Botanica plant simulation plugin enabled!");
         getLogger().info("Registered botanica command with " + (getCommand("botanica") != null ? "SUCCESS" : "FAILURE"));
@@ -250,4 +250,5 @@ public class Botanica extends JavaPlugin implements Listener {
     // Getters for repositories
     public PlantRepo getPlantRepo() { return plantRepo; }
     public SoilRepo getSoilRepo() { return soilRepo; }
+    public SimulationService getSimulationService() { return simulationService; }
 }

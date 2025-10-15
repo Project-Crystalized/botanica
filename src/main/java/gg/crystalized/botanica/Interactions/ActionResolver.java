@@ -127,6 +127,12 @@ public class ActionResolver {
             return true; // We handled it (with error message)
         }
         
+        // Check if soil is tilled/prepared
+        if (!ctx.soil.tilled) {
+            ctx.player.sendMessage(ChatColor.RED + "Soil must be tilled before planting! Use a hoe on the soil first.");
+            return true; // We handled it (with error message)
+        }
+        
         // Plant the seed (one block above soil)
         BlockPos plantPos = new BlockPos(
             ctx.clickedPos.world(),
