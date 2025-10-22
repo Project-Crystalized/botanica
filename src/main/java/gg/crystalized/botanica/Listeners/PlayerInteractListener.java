@@ -555,13 +555,17 @@ public class PlayerInteractListener implements Listener {
         // Get existing soil instance or create new one
         SoilInstance soil = soilRepo.get(pos);
         if (soil == null) {
+            // Generate random water and nutrient levels between 10-20%
+            double randomWater = 10.0 + (Math.random() * 10.0); // 10.0 to 20.0
+            double randomNutrients = 10.0 + (Math.random() * 10.0); // 10.0 to 20.0
+            
             // Create new soil instance (untilled by default)
             soil = new SoilInstance(
                 pos, 
                 bucketData.getSoilType(), 
                 bucketData.getSecondaryPercentage(), // Use secondary percentage as quality multiplier
-                50.0, // Default water level
-                50.0, // Default nutrient level
+                randomWater, // Random water level 10-20%
+                randomNutrients, // Random nutrient level 10-20%
                 false, // Not tilled yet
                 java.time.Instant.now()
             );
