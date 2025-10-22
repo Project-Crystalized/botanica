@@ -129,6 +129,22 @@ public class PlantLookupTask extends BukkitRunnable {
             if (soil != null) {
                 SoilSpec soilSpec = dataManager.soils().get(soil.soilId);
                 if (soilSpec != null) {
+                    // Check if there's a plant above this soil block
+                    BlockPos plantPos = new BlockPos(pos.world(), pos.x(), pos.y() + 1, pos.z());
+                    PlantInstance plantAbove = plantRepo.get(plantPos);
+                    
+                    if (plantAbove != null) {
+                        // There's a plant above, show plant UI instead of soil-only UI
+                        PlantSpec plantSpec = dataManager.plants().get(plantAbove.speciesId);
+                        if (plantSpec != null) {
+                            Component message = actionBarUI.formatPlant(plantAbove, plantSpec, soil);
+                            player.sendActionBar(message);
+                            lastDisplayedPos.put(player.getUniqueId(), pos);
+                            return;
+                        }
+                    }
+                    
+                    // No plant above, show soil-only UI
                     Component message = actionBarUI.formatSoil(soil, soilSpec);
                     player.sendActionBar(message);
                     lastDisplayedPos.put(player.getUniqueId(), pos);

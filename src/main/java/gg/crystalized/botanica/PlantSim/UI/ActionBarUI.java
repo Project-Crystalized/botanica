@@ -33,6 +33,18 @@ public class ActionBarUI {
      * Format soil-only display (no plant).
      */
     public Component formatSoil(SoilInstance soil, SoilSpec spec) {
+        // Determine if soil is ready for planting
+        String statusText;
+        NamedTextColor statusColor;
+        
+        if (soil.tilled) {
+            statusText = "Ready to plant";
+            statusColor = NamedTextColor.GREEN;
+        } else {
+            statusText = "Needs tilling";
+            statusColor = NamedTextColor.YELLOW;
+        }
+        
         // 🌱 Loamy Soil | 💧 45/100 | 🌾 80/100 | Ready to plant
         return Component.text()
             .append(Component.text("🌱 ", NamedTextColor.GREEN))
@@ -42,7 +54,7 @@ public class ActionBarUI {
             .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
             .append(formatNutrients(soil.nutrients))
             .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
-            .append(Component.text("Ready to plant", NamedTextColor.GREEN))
+            .append(Component.text(statusText, statusColor))
             .build();
     }
     

@@ -236,6 +236,17 @@ public class PlayerInteractListener implements Listener {
             return false; // Not a custom soil block, don't handle
         }
         
+        // Check if there's a plant on this soil block
+        BlockPos soilPos = BlockPos.fromBukkitLocation(clickedBlock.getLocation());
+        BlockPos plantPos = new BlockPos(soilPos.world(), soilPos.x(), soilPos.y() + 1, soilPos.z());
+        PlantInstance plantOnSoil = plantRepo.get(plantPos);
+        
+        if (plantOnSoil != null) {
+            // There's a plant on this soil - don't allow soil pickup
+            player.sendMessage("§cYou cannot remove soil that has a plant growing on it!");
+            return true; // Handle the event to prevent default behavior
+        }
+        
         // Extract soil data from the block
         SoilBucketData soilData = SoilBlockData.extractFromBlock(clickedBlock);
         if (soilData == null) {
