@@ -12,6 +12,7 @@ import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
 import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
+import gg.crystalized.botanica.PlantSim.Generation.SoilBinBlock;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -40,14 +41,16 @@ public class PlayerInteractListener implements Listener {
     private final SoilRepo soilRepo;
     private final PlantActions plantActions;
     private final BlockAliasManager aliasManager;
+    private final SoilBinBlock soilBinBlock;
     
-    public PlayerInteractListener(ItemActionRegistry registry, ActionResolver resolver, PlantRepo plantRepo, SoilRepo soilRepo, PlantActions plantActions, BlockAliasManager aliasManager) {
+    public PlayerInteractListener(ItemActionRegistry registry, ActionResolver resolver, PlantRepo plantRepo, SoilRepo soilRepo, PlantActions plantActions, BlockAliasManager aliasManager, SoilBinBlock soilBinBlock) {
         this.registry = registry;
         this.resolver = resolver;
         this.plantRepo = plantRepo;
         this.soilRepo = soilRepo;
         this.plantActions = plantActions;
         this.aliasManager = aliasManager;
+        this.soilBinBlock = soilBinBlock;
     }
     
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -63,6 +66,11 @@ public class PlayerInteractListener implements Listener {
         // PRIORITY 0: Handle soil bucket interactions (empty bucket pickup / filled bucket placement)
         if (handleSoilBucketInteraction(event, player, item)) {
             return; // Bucket interaction handled, skip normal action resolution
+        }
+        
+        // PRIORITY 0.5: Handle soil bin interactions (includes bonemeal prevention)
+        if (handleSoilBinInteraction(event, player, item)) {
+            return; // Soil bin interaction handled, skip normal action resolution
         }
         
         // Check if this item has registered actions
@@ -141,6 +149,7 @@ public class PlayerInteractListener implements Listener {
     /**
      * Prevent vanilla block placement for Botanica-registered items.
      * This catches seed planting and other item types that trigger BlockPlaceEvent.
+     * Also handles soil bin interactions when placing dirt/sand near composters.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -152,8 +161,11 @@ public class PlayerInteractListener implements Listener {
         // If this item is registered in Botanica's action system, cancel vanilla placement
         if (registry.hasActions(itemId)) {
             event.setCancelled(true);
+            return;
         }
+        
     }
+    
     
     /**
      * Find a walkthrough plant along the player's line of sight.
@@ -421,7 +433,13 @@ public class PlayerInteractListener implements Listener {
             block.getType() == Material.BROWN_MUSHROOM_BLOCK) {
             event.setCancelled(true);
         }
+        
+        // Cancel physics updates for composters to prevent vanilla bonemeal behavior
+        if (block.getType() == Material.COMPOSTER) {
+            event.setCancelled(true);
+        }
     }
+    
     
     /**
      * Handle hoe tilling interactions on soil blocks.
@@ -592,6 +610,41 @@ public class PlayerInteractListener implements Listener {
         
         soilRepo.upsert(soil);
     }
+    
+    /**
+     * Handle soil bin interactions (ingredient addition, soil retrieval, and bonemeal prevention).
+     */
+    private boolean handleSoilBinInteraction(PlayerInteractEvent event, Player player, ItemStack item) {
+        // Check if the clicked block is a composter (soil bin)
+        if (event.getClickedBlock() == null || event.getClickedBlock().getType() != Material.COMPOSTER) {
+            return false; // Not a soil bin, don't handle
+        }
+        
+        Block composter = event.getClickedBlock();
+        
+        // Check if this is a level 8 composter (ready for bonemeal harvest)
+        org.bukkit.block.data.BlockData blockData = composter.getBlockData();
+        if (blockData instanceof org.bukkit.block.data.Levelled) {
+            org.bukkit.block.data.Levelled levelledData = (org.bukkit.block.data.Levelled) blockData;
+            if (levelledData.getLevel() == 8) {
+                // This is a level 8 composter - prevent bonemeal harvest and handle as soil bin
+                event.setCancelled(true);
+                
+                // If player is holding an empty bucket, handle as soil retrieval
+                if (item != null && item.getType() == Material.BUCKET) {
+                    return soilBinBlock.handleInteraction(composter, player, item);
+                } else {
+                    // Player is trying to harvest bonemeal - tell them to use a bucket
+                    player.sendMessage("§eUse an empty bucket to retrieve soil from this bin!");
+                    return true;
+                }
+            }
+        }
+        
+        // For all other composter levels, delegate to SoilBinBlock for handling
+        return soilBinBlock.handleInteraction(composter, player, item);
+    }
+    
     
 }
 

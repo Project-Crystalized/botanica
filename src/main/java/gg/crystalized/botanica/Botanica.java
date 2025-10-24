@@ -6,6 +6,8 @@ import gg.crystalized.botanica.Interactions.ActionResolver;
 import gg.crystalized.botanica.Interactions.ItemActionRegistry;
 import gg.crystalized.botanica.Listeners.PlantBreakListener;
 import gg.crystalized.botanica.Listeners.PlayerInteractListener;
+import gg.crystalized.botanica.PlantSim.Generation.SoilBinBlock;
+import gg.crystalized.botanica.PlantSim.Generation.SoilGenerationService;
 import gg.crystalized.botanica.PlantSim.Actions.PlantActions;
 import gg.crystalized.botanica.PlantSim.Bus.LocalMutationBus;
 import gg.crystalized.botanica.PlantSim.Bus.MutationApplier;
@@ -128,9 +130,13 @@ public class Botanica extends JavaPlugin implements Listener {
         plantActions = new PlantActions(sdm, soilRepo, plantRepo, mutationBus, schematicManager);
         actionResolver = new ActionResolver(plantActions, soilRepo, plantRepo, schematicBlockIndex);
         
+        // Create soil bin system
+        SoilGenerationService soilGenerationService = new SoilGenerationService(sdm);
+        SoilBinBlock soilBinBlock = new SoilBinBlock(soilGenerationService, sdm, aliasManager);
+        
         // Register event listeners
         registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config, aliasManager));
-        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo, soilRepo, plantActions, aliasManager));
+        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo, soilRepo, plantActions, aliasManager, soilBinBlock));
         
         // Start simulation loop
         startSimulation();
