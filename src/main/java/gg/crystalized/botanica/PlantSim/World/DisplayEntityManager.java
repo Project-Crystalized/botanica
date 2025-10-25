@@ -59,9 +59,6 @@ public class DisplayEntityManager {
      * @param materialName Material name (can be alias or block state syntax)
      */
     public void setDisplayBlock(BlockPos pos, String materialName) {
-        // Remove old entity if exists
-        removeDisplayBlock(pos);
-        
         // Resolve alias to actual block state
         String resolved = aliasManager.resolve(materialName);
         BlockData blockData = parseBlockData(resolved);
@@ -69,10 +66,25 @@ public class DisplayEntityManager {
             return;
         }
         
-        // Spawn display entity
         org.bukkit.World world = Bukkit.getWorld(pos.world());
         if (world == null) return;
         
+        // Check if entity already exists at this position
+        UUID existingEntityId = singleBlockEntities.get(pos);
+        if (existingEntityId != null) {
+            // Try to update existing entity instead of spawning new one
+            org.bukkit.entity.Entity entity = world.getEntity(existingEntityId);
+            if (entity instanceof BlockDisplay existingDisplay) {
+                // Update the block data on the existing entity (no flicker!)
+                existingDisplay.setBlock(blockData);
+                return; // Done - we updated the existing entity
+            } else {
+                // Entity doesn't exist or wrong type, remove from map
+                singleBlockEntities.remove(pos);
+            }
+        }
+        
+        // No existing entity, spawn a new one
         Location location = new Location(world, pos.x(), pos.y(), pos.z());
         BlockDisplay display = world.spawn(location, BlockDisplay.class, entity -> {
             entity.setBlock(blockData);

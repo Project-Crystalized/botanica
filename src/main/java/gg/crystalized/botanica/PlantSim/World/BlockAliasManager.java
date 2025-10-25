@@ -20,7 +20,7 @@ import java.util.Map;
 public class BlockAliasManager {
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Map<String, String> blockAliases = new HashMap<>();
-    private final Map<String, String> itemAliases = new HashMap<>();
+    private final Map<String, Object> itemAliases = new HashMap<>();
     private final File aliasFile;
 
     public BlockAliasManager() {
@@ -49,7 +49,44 @@ public class BlockAliasManager {
      * @return Base material string or null
      */
     public String resolveItemMaterial(String itemName) {
-        return itemAliases.get(itemName);
+        Object itemData = itemAliases.get(itemName);
+        if (itemData == null) {
+            return null;
+        }
+        
+        // Handle both string and object formats
+        if (itemData instanceof String) {
+            return (String) itemData;
+        } else if (itemData instanceof java.util.Map) {
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> itemMap = (java.util.Map<String, Object>) itemData;
+            return (String) itemMap.get("base");
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get the display name for an item alias.
+     * Returns null if the item doesn't have a static name (e.g., soil buckets with dynamic names).
+     * 
+     * @param itemName Item alias (e.g., "bagged_dirt")
+     * @return Display name or null if not specified
+     */
+    public String getItemDisplayName(String itemName) {
+        Object itemData = itemAliases.get(itemName);
+        if (itemData == null) {
+            return null;
+        }
+        
+        // Only return display name if it's an object with itemName
+        if (itemData instanceof java.util.Map) {
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> itemMap = (java.util.Map<String, Object>) itemData;
+            return (String) itemMap.get("itemName");
+        }
+        
+        return null; // String format means no static name
     }
 
     /**
@@ -96,7 +133,7 @@ public class BlockAliasManager {
         Map<String, String> blockAliases;
         
         @SerializedName("itemAliases")
-        Map<String, String> itemAliases;
+        Map<String, Object> itemAliases;
     }
 }
 

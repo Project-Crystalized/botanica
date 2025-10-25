@@ -3,6 +3,8 @@ package gg.crystalized.botanica.PlantSim.Generation;
 import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBucketData;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
 import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
+import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.PlantSim.World.DisplayEntityManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -10,18 +12,20 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * Manages soil bin block interactions and state.
- * Uses composter as base block with custom behavior.
+ * Uses barrier block with display entity for visuals.
  */
 public class SoilBinBlock {
     
     private final SoilGenerationService generationService;
     private final SimulationDataManager dataManager;
     private final BlockAliasManager aliasManager;
+    private final DisplayEntityManager displayEntityManager;
     
-    public SoilBinBlock(SoilGenerationService generationService, SimulationDataManager dataManager, BlockAliasManager aliasManager) {
+    public SoilBinBlock(SoilGenerationService generationService, SimulationDataManager dataManager, BlockAliasManager aliasManager, DisplayEntityManager displayEntityManager) {
         this.generationService = generationService;
         this.dataManager = dataManager;
         this.aliasManager = aliasManager;
+        this.displayEntityManager = displayEntityManager;
     }
     
     /**
@@ -33,7 +37,7 @@ public class SoilBinBlock {
      * @return true if interaction was handled, false otherwise
      */
     public boolean handleInteraction(Block block, Player player, ItemStack item) {
-        if (block.getType() != Material.COMPOSTER) {
+        if (block.getType() != Material.BARRIER) {
             return false;
         }
         
@@ -102,12 +106,17 @@ public class SoilBinBlock {
             SoilBinData.setSoilType(block, "");
             updateVisualLevel(block, 0);
         } else {
-            // Calculate visual level based on remaining soil vs total soil ratio
-            int totalSoil = SoilBinData.getRemainingSoil(block) + newRemainingSoil; // Current remaining + what we're calculating for
-            if (totalSoil > 0) {
-                double ratio = (double) newRemainingSoil / totalSoil;
-                int totalIngredients = SoilBinData.getTotalVolume(block);
-                int visualLevel = (int) Math.ceil(ratio * totalIngredients);
+            // Calculate visual level based on remaining soil vs total ingredients
+            // The visual level should decrease proportionally to how much soil is left
+            int totalIngredients = SoilBinData.getTotalVolume(block);
+            int dirtCount = SoilBinData.getDirtCount(block); // Total soil buckets available
+            
+            if (dirtCount > 0) {
+                // Ratio of remaining soil to total soil
+                double ratio = (double) newRemainingSoil / dirtCount;
+                // Apply ratio to total ingredients to get visual level
+                double exactLevel = ratio * totalIngredients;
+                int visualLevel = (int) Math.round(exactLevel);
                 updateVisualLevel(block, Math.max(1, Math.min(7, visualLevel)));
             } else {
                 updateVisualLevel(block, 0);
@@ -295,23 +304,22 @@ public class SoilBinBlock {
     }
     
     /**
-     * Update visual level of composter.
+     * Update visual level of soil bin using display entity.
      */
     private void updateVisualLevel(Block block, int level) {
-        if (block.getType() != Material.COMPOSTER) {
+        if (block.getType() != Material.BARRIER) {
             return;
         }
         
-        // Clamp level to valid range (0-7, never 8 to prevent bonemeal)
+        // Clamp level to valid range (0-7)
         level = Math.max(0, Math.min(7, level));
         
-        // Get current block data and update level
-        org.bukkit.block.data.BlockData blockData = block.getBlockData();
-        if (blockData instanceof org.bukkit.block.data.Levelled) {
-            org.bukkit.block.data.Levelled levelledData = (org.bukkit.block.data.Levelled) blockData;
-            levelledData.setLevel(level);
-            block.setBlockData(levelledData);
-        }
+        // Get the soil bin block alias from ResourcePackAliases
+        String soilBinAlias = "soil_bin_" + level;
+        
+        // Update the display entity to show the new level
+        BlockPos pos = BlockPos.fromBukkitLocation(block.getLocation());
+        displayEntityManager.setDisplayBlock(pos, soilBinAlias);
     }
     
     /**
@@ -319,7 +327,7 @@ public class SoilBinBlock {
      * Used when secondary ingredients are added, or when dirt is added (to update type/concentration).
      */
     private void updateSoilTypeAndConcentration(Block block) {
-        if (block.getType() != Material.COMPOSTER) {
+        if (block.getType() != Material.BARRIER) {
             return;
         }
         

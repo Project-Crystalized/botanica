@@ -184,40 +184,96 @@ public class PlantCommands implements CommandExecutor {
                 }
             }
             
-            case "soilgive" -> {
-                // Give soil block with specific type and percentage
-                if (args.length < 3) {
-                    player.sendMessage(ChatColor.RED + "Usage: /botanica soilgive <type> <percentage> [tilled]");
-                    player.sendMessage(ChatColor.GRAY + "Example: /botanica soilgive SANDY 80 true");
+            case "give" -> {
+                // Give any custom item or block from ResourcePackAliases
+                if (args.length < 2) {
+                    player.sendMessage(ChatColor.RED + "Usage: /botanica give <alias> [amount]");
+                    player.sendMessage(ChatColor.GRAY + "Example: /botanica give bagged_dirt 5");
+                    player.sendMessage(ChatColor.GRAY + "Example: /botanica give soil_bin_0");
+                    player.sendMessage(ChatColor.GRAY + "Available: bagged_dirt, bagged_sand, soil_bucket, soil_bucket_sandy, soil_bin_0-7");
                     return true;
                 }
                 
-                String soilType = args[1].toUpperCase();
-                double percentage = Double.parseDouble(args[2]) / 100.0; // Convert to 0-1 range
-                boolean tilled = args.length > 3 && args[3].equalsIgnoreCase("true");
+                String alias = args[1];
+                int amount = args.length > 2 ? Integer.parseInt(args[2]) : 1;
                 
-                // Get soil spec
-                SoilSpec soilSpec = dataManager.soils().get(soilType);
-                if (soilSpec == null) {
-                    player.sendMessage(ChatColor.RED + "Unknown soil type: " + soilType);
+                // Try to resolve as item first
+                String baseMaterial = aliasManager.resolveItemMaterial(alias);
+                boolean isItem = baseMaterial != null;
+                
+                // If not an item, try to resolve as block
+                if (!isItem) {
+                    String blockState = aliasManager.resolve(alias);
+                    if (blockState != null) {
+                        // It's a block - create block item
+                        try {
+                            org.bukkit.block.data.BlockData blockData = org.bukkit.Bukkit.createBlockData(blockState);
+                            ItemStack item = new ItemStack(blockData.getMaterial(), amount);
+                            
+                            // Set the block data on the item
+                            if (item.getItemMeta() instanceof org.bukkit.inventory.meta.BlockDataMeta blockDataMeta) {
+                                blockDataMeta.setBlockData(blockData);
+                                item.setItemMeta(blockDataMeta);
+                            }
+                            
+                            player.getInventory().addItem(item);
+                            
+                            // Get display name for success message
+                            String displayName = alias.replace("_", " ").toLowerCase();
+                            player.sendMessage(ChatColor.GREEN + "Gave " + amount + "x " + displayName);
+                            return true;
+                        } catch (Exception e) {
+                            player.sendMessage(ChatColor.RED + "Invalid block state: " + blockState);
+                            return true;
+                        }
+                    }
+                }
+                
+                // Handle as item
+                if (baseMaterial == null) {
+                    player.sendMessage(ChatColor.RED + "Unknown alias: " + alias);
+                    player.sendMessage(ChatColor.GRAY + "Available: bagged_dirt, bagged_sand, soil_bucket, soil_bucket_sandy, soil_bin_0-7");
                     return true;
                 }
                 
-                // Get the appropriate block alias
-                String blockAlias = soilSpec.getBlockForPercentage(percentage, tilled);
-                if (blockAlias == null) {
-                    player.sendMessage(ChatColor.RED + "No block found for " + soilType + " at " + (percentage * 100) + "%");
+                // Create the item
+                Material material = Material.matchMaterial(baseMaterial);
+                if (material == null) {
+                    player.sendMessage(ChatColor.RED + "Invalid material: " + baseMaterial);
                     return true;
                 }
                 
-                // Create filled soil bucket instead of block item
-                String bucketItemId = soilSpec.bucketItemId;
-                ItemStack soilBucket = gg.crystalized.botanica.PlantSim.Domain.Data.SoilBucketData.createFilledBucket(bucketItemId, soilType, percentage, aliasManager);
-                player.getInventory().addItem(soilBucket);
+                ItemStack item = new ItemStack(material, amount);
                 
-                player.sendMessage(ChatColor.GREEN + "Gave bucket of " + soilType + " soil (" + 
-                    String.format("%.1f", percentage * 100) + "%" + 
-                    (tilled ? ", tilled" : "") + ")");
+                // Set custom model data and display name
+                ItemMeta meta = item.getItemMeta();
+                
+                // Get display name from ResourcePackAliases (if available)
+                String displayName = aliasManager.getItemDisplayName(alias);
+                if (displayName != null) {
+                    meta.setDisplayName(ChatColor.WHITE + displayName);
+                }
+                
+                // Set custom model data using CustomModelDataComponent
+                org.bukkit.inventory.meta.components.CustomModelDataComponent cmd = meta.getCustomModelDataComponent();
+                cmd.setStrings(java.util.List.of(alias));
+                
+                // Clear any old numeric custom model data
+                // meta.setCustomModelData(null);
+                
+                // Set the component back
+                meta.setCustomModelDataComponent(cmd);
+                
+                item.setItemMeta(meta);
+                
+                player.getInventory().addItem(item);
+                
+                // Get display name for success message
+                String successDisplayName = aliasManager.getItemDisplayName(alias);
+                if (successDisplayName == null) {
+                    successDisplayName = alias.replace("_", " ").toLowerCase();
+                }
+                player.sendMessage(ChatColor.GREEN + "Gave " + amount + "x " + successDisplayName);
             }
             
             default -> {
@@ -363,6 +419,7 @@ public class PlantCommands implements CommandExecutor {
         return item;
     }
 
+
     private void showHelp(Player player) {
         player.sendMessage(ChatColor.YELLOW + "=== Botanica Commands ===");
         player.sendMessage(ChatColor.GRAY + "All commands target the block you're looking at!");
@@ -374,7 +431,7 @@ public class PlantCommands implements CommandExecutor {
         player.sendMessage(ChatColor.WHITE + "/botanica harvest [loot_level] - Harvest mature plant");
         player.sendMessage(ChatColor.WHITE + "/botanica status - Show plant status (look at plant)");
         player.sendMessage(ChatColor.WHITE + "/botanica soil - Show soil status (look at soil or plant)");
-        player.sendMessage(ChatColor.WHITE + "/botanica soilgive <type> <percentage> [tilled] - Give soil block");
+        player.sendMessage(ChatColor.WHITE + "/botanica give <item_alias> [amount] - Give custom items");
         player.sendMessage(ChatColor.WHITE + "/botanica reload - Hot-reload all specs and schematics");
     }
 }

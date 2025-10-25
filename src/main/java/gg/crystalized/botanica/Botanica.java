@@ -132,11 +132,11 @@ public class Botanica extends JavaPlugin implements Listener {
         
         // Create soil bin system
         SoilGenerationService soilGenerationService = new SoilGenerationService(sdm);
-        SoilBinBlock soilBinBlock = new SoilBinBlock(soilGenerationService, sdm, aliasManager);
+        SoilBinBlock soilBinBlock = new SoilBinBlock(soilGenerationService, sdm, aliasManager, displayEntityManager);
         
         // Register event listeners
         registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config, aliasManager));
-        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo, soilRepo, plantActions, aliasManager, soilBinBlock));
+        registerEvents(new PlayerInteractListener(itemActionRegistry, actionResolver, plantRepo, soilRepo, plantActions, aliasManager, soilBinBlock, displayEntityManager));
         
         // Start simulation loop
         startSimulation();

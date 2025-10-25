@@ -25,8 +25,8 @@ public class SoilBinData {
      * Initialize a new soil bin with empty state.
      */
     public static void createSoilBin(Block block) {
-        if (block.getType() != Material.COMPOSTER) {
-            throw new IllegalArgumentException("Block must be a composter");
+        if (block.getType() != Material.BARRIER) {
+            throw new IllegalArgumentException("Block must be a barrier");
         }
         
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
@@ -58,49 +58,49 @@ public class SoilBinData {
     
     // Getter methods
     public static int getTotalVolume(Block block) {
-        if (block.getType() != Material.COMPOSTER) return 0;
+        if (block.getType() != Material.BARRIER) return 0;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, TOTAL_VOLUME_KEY), PersistentDataType.INTEGER, 0);
     }
     
     public static int getDirtCount(Block block) {
-        if (block.getType() != Material.COMPOSTER) return 0;
+        if (block.getType() != Material.BARRIER) return 0;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, DIRT_COUNT_KEY), PersistentDataType.INTEGER, 0);
     }
     
     public static double getDirtPercentage(Block block) {
-        if (block.getType() != Material.COMPOSTER) return 0.0;
+        if (block.getType() != Material.BARRIER) return 0.0;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, DIRT_PERCENTAGE_KEY), PersistentDataType.DOUBLE, 0.0);
     }
     
     public static double getSecondaryPercentage(Block block) {
-        if (block.getType() != Material.COMPOSTER) return 0.0;
+        if (block.getType() != Material.BARRIER) return 0.0;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, SECONDARY_PERCENTAGE_KEY), PersistentDataType.DOUBLE, 0.0);
     }
     
     public static int getRemainingSoil(Block block) {
-        if (block.getType() != Material.COMPOSTER) return 0;
+        if (block.getType() != Material.BARRIER) return 0;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, REMAINING_SOIL_KEY), PersistentDataType.INTEGER, 0);
     }
     
     public static String getSoilType(Block block) {
-        if (block.getType() != Material.COMPOSTER) return "";
+        if (block.getType() != Material.BARRIER) return "";
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, SOIL_TYPE_KEY), PersistentDataType.STRING, "");
     }
     
     public static boolean isLocked(Block block) {
-        if (block.getType() != Material.COMPOSTER) return false;
+        if (block.getType() != Material.BARRIER) return false;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         return container.getOrDefault(getKey(blockKey, LOCKED_KEY), PersistentDataType.BOOLEAN, false);
@@ -108,49 +108,49 @@ public class SoilBinData {
     
     // Setter methods
     public static void setTotalVolume(Block block, int totalVolume) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, TOTAL_VOLUME_KEY), PersistentDataType.INTEGER, totalVolume);
     }
     
     public static void setDirtCount(Block block, int dirtCount) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, DIRT_COUNT_KEY), PersistentDataType.INTEGER, dirtCount);
     }
     
     public static void setDirtPercentage(Block block, double dirtPercentage) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, DIRT_PERCENTAGE_KEY), PersistentDataType.DOUBLE, dirtPercentage);
     }
     
     public static void setSecondaryPercentage(Block block, double secondaryPercentage) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, SECONDARY_PERCENTAGE_KEY), PersistentDataType.DOUBLE, secondaryPercentage);
     }
     
     public static void setRemainingSoil(Block block, int remainingSoil) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, REMAINING_SOIL_KEY), PersistentDataType.INTEGER, remainingSoil);
     }
     
     public static void setSoilType(Block block, String soilType) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, SOIL_TYPE_KEY), PersistentDataType.STRING, soilType);
     }
     
     public static void setLocked(Block block, boolean locked) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
         container.set(getKey(blockKey, LOCKED_KEY), PersistentDataType.BOOLEAN, locked);
@@ -160,7 +160,7 @@ public class SoilBinData {
      * Clear all soil bin data when block is broken.
      */
     public static void clearSoilBinData(Block block) {
-        if (block.getType() != Material.COMPOSTER) return;
+        if (block.getType() != Material.BARRIER) return;
         
         PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
         String blockKey = getBlockKey(block);
