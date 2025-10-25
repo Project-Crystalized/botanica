@@ -7,6 +7,7 @@ import gg.crystalized.botanica.Interactions.ItemActionRegistry;
 import gg.crystalized.botanica.Listeners.PlantBreakListener;
 import gg.crystalized.botanica.Listeners.PlayerInteractListener;
 import gg.crystalized.botanica.PlantSim.Generation.SoilBinBlock;
+import gg.crystalized.botanica.PlantSim.Generation.SoilBinUIManager;
 import gg.crystalized.botanica.PlantSim.Generation.SoilGenerationService;
 import gg.crystalized.botanica.PlantSim.Actions.PlantActions;
 import gg.crystalized.botanica.PlantSim.Bus.LocalMutationBus;
@@ -132,7 +133,11 @@ public class Botanica extends JavaPlugin implements Listener {
         
         // Create soil bin system
         SoilGenerationService soilGenerationService = new SoilGenerationService(sdm);
-        SoilBinBlock soilBinBlock = new SoilBinBlock(soilGenerationService, sdm, aliasManager, displayEntityManager);
+        SoilBinUIManager soilBinUIManager = new SoilBinUIManager(sdm);
+        SoilBinBlock soilBinBlock = new SoilBinBlock(soilGenerationService, sdm, aliasManager, displayEntityManager, soilBinUIManager);
+        
+        // Start soil bin UI look detection
+        soilBinUIManager.startLookDetection(this);
         
         // Register event listeners
         registerEvents(new PlantBreakListener(plantRepo, schematicBlockIndex, schematicManager, sdm, config, aliasManager));

@@ -3,6 +3,7 @@ package gg.crystalized.botanica.PlantSim.Domain.Data;
 public final class SoilSpec {
     public String id;
     public String displayName;
+    public String altName; // Short name for UI display (e.g., "dirt", "sand")
     public String block;
     public String requiredSecondary; // Material needed to create this soil type (null for plain soil)
     public String bucketItemId; // Custom bucket item for this soil type (e.g., "bucket_sandy_soil")

@@ -20,12 +20,14 @@ public class SoilBinBlock {
     private final SimulationDataManager dataManager;
     private final BlockAliasManager aliasManager;
     private final DisplayEntityManager displayEntityManager;
+    private final SoilBinUIManager uiManager;
     
-    public SoilBinBlock(SoilGenerationService generationService, SimulationDataManager dataManager, BlockAliasManager aliasManager, DisplayEntityManager displayEntityManager) {
+    public SoilBinBlock(SoilGenerationService generationService, SimulationDataManager dataManager, BlockAliasManager aliasManager, DisplayEntityManager displayEntityManager, SoilBinUIManager uiManager) {
         this.generationService = generationService;
         this.dataManager = dataManager;
         this.aliasManager = aliasManager;
         this.displayEntityManager = displayEntityManager;
+        this.uiManager = uiManager;
     }
     
     /**
@@ -127,6 +129,9 @@ public class SoilBinBlock {
         bucket.setAmount(bucket.getAmount() - 1);
         player.getInventory().addItem(new ItemStack(Material.BUCKET));
         
+        // Update UI
+        uiManager.updateUI(block);
+        
         player.sendMessage("§aRetrieved soil bucket! (" + newRemainingSoil + " remaining)");
         return true;
     }
@@ -224,6 +229,9 @@ public class SoilBinBlock {
         
         // Consume the item
         ingredient.setAmount(ingredient.getAmount() - 1);
+        
+        // Update UI
+        uiManager.updateUI(block);
         
         player.sendMessage("§aAdded ingredient to soil bin! (" + newVolume + "/7)");
         return true;
