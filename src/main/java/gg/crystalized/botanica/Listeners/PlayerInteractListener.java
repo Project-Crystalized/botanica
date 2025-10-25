@@ -26,6 +26,7 @@ import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.ArrayList;
@@ -64,6 +65,13 @@ public class PlayerInteractListener implements Listener {
         // Validate basic interaction
         if (item == null) {
             return;
+        }
+        
+        // PRIORITY -1: Handle wrench removal of soil bins (before placement)
+        if (isWrench(item) && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (handleWrenchRemoval(event, player, item)) {
+                return; // Wrench removal handled, skip normal action resolution
+            }
         }
         
         // PRIORITY -0.5: Handle soil bin item placement (before other interactions)
@@ -650,6 +658,102 @@ public class PlayerInteractListener implements Listener {
         
         // Check if the custom model data contains "soil_bin"
         return cmd.getStrings().contains("soil_bin");
+    }
+    
+    /**
+     * Check if an item is a wrench.
+     */
+    private boolean isWrench(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+        
+        // Check if it has custom model data component
+        if (!item.getItemMeta().hasCustomModelDataComponent()) {
+            return false;
+        }
+        
+        var cmd = item.getItemMeta().getCustomModelDataComponent();
+        if (cmd == null || cmd.getStrings().isEmpty()) {
+            return false;
+        }
+        
+        // Check if the custom model data contains "wrench"
+        return cmd.getStrings().contains("wrench");
+    }
+    
+    /**
+     * Handle wrench removal of soil bins and other custom blocks.
+     */
+    private boolean handleWrenchRemoval(PlayerInteractEvent event, Player player, ItemStack wrench) {
+        Block clickedBlock = event.getClickedBlock();
+        if (clickedBlock == null) {
+            return false;
+        }
+        
+        // Check if this is a soil bin (barrier block with soil bin data)
+        if (clickedBlock.getType() == Material.BARRIER) {
+            // Check if it has soil bin data
+            int totalVolume = gg.crystalized.botanica.PlantSim.Generation.SoilBinData.getTotalVolume(clickedBlock);
+            
+            // If it has any data, it's a soil bin (even if empty, it would have been initialized)
+            // We check if data exists by seeing if we can get any stored value
+            if (totalVolume >= 0) { // If data exists, this will return a value (even 0)
+                // Cancel the event
+                event.setCancelled(true);
+                
+                // Check if soil bin has any ingredients
+                if (totalVolume > 0) {
+                    player.sendMessage("§eMust be emptied first!");
+                    return true; // Handled - prevent removal
+                }
+                
+                // Soil bin is empty, safe to remove
+                // Remove the display entity
+                BlockPos pos = BlockPos.fromBukkitLocation(clickedBlock.getLocation());
+                displayEntityManager.removeDisplayBlock(pos);
+                
+                // Clear the soil bin data
+                gg.crystalized.botanica.PlantSim.Generation.SoilBinData.clearSoilBinData(clickedBlock);
+                
+                // Remove the barrier block
+                clickedBlock.setType(Material.AIR);
+                
+                // Drop the soil bin item
+                String baseMaterial = aliasManager.resolveItemMaterial("soil_bin");
+                if (baseMaterial != null) {
+                    Material material = Material.matchMaterial(baseMaterial);
+                    if (material != null) {
+                        ItemStack soilBinItem = new ItemStack(material, 1);
+                        ItemMeta meta = soilBinItem.getItemMeta();
+                        
+                        // Set display name
+                        String displayName = aliasManager.getItemDisplayName("soil_bin");
+                        if (displayName != null) {
+                            meta.setDisplayName(org.bukkit.ChatColor.WHITE + displayName);
+                        }
+                        
+                        // Set custom model data
+                        var cmd = meta.getCustomModelDataComponent();
+                        cmd.setStrings(java.util.List.of("soil_bin"));
+                        meta.setCustomModelDataComponent(cmd);
+                        
+                        soilBinItem.setItemMeta(meta);
+                        
+                        // Drop at block location
+                        clickedBlock.getWorld().dropItemNaturally(clickedBlock.getLocation(), soilBinItem);
+                    }
+                }
+                
+                // Play break sound
+                player.playSound(clickedBlock.getLocation(), "block.stone.break", 1.0f, 1.0f);
+                player.sendMessage("§aRemoved soil bin!");
+                
+                return true; // Handled
+            }
+        }
+        
+        return false; // Not a soil bin or no data
     }
     
     /**
