@@ -1,6 +1,5 @@
-package gg.crystalized.botanica.PlantSim.Generation;
+package gg.crystalized.botanica.Soil.Generation;
 
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
 
 /**

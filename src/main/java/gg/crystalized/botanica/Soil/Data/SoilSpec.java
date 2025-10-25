@@ -1,4 +1,4 @@
-package gg.crystalized.botanica.PlantSim.Domain.Data;
+package gg.crystalized.botanica.Soil.Data;
 
 public final class SoilSpec {
     public String id;

@@ -6,12 +6,12 @@ import gg.crystalized.botanica.PlantSim.Bus.Mutation;
 import gg.crystalized.botanica.PlantSim.Bus.MutationBus;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantModifier;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
+import gg.crystalized.botanica.Soil.Data.SoilSpec;
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
 

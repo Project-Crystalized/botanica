@@ -1,5 +1,6 @@
-package gg.crystalized.botanica.PlantSim.Domain.Data;
+package gg.crystalized.botanica.Soil.Data;
 
+import gg.crystalized.botanica.World.BlockAliasManager;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -25,7 +26,7 @@ public class SoilBucketData {
      * @param aliasManager The BlockAliasManager to resolve custom model data
      * @return ItemStack with NBT data (custom item with custom model)
      */
-    public static ItemStack createFilledBucket(String bucketItemId, String soilType, double secondaryPercentage, gg.crystalized.botanica.PlantSim.World.BlockAliasManager aliasManager) {
+    public static ItemStack createFilledBucket(String bucketItemId, String soilType, double secondaryPercentage, BlockAliasManager aliasManager) {
         // Use BlockAliasManager to get material dynamically
         String materialName = aliasManager.resolveItemMaterial(bucketItemId);
         org.bukkit.Material material = org.bukkit.Material.FLINT; // Default fallback
@@ -193,9 +194,9 @@ public class SoilBucketData {
      * @param aliasManager The BlockAliasManager for resolving bucket models
      * @return ItemStack of soil bucket, or null if soil type not found
      */
-    public static ItemStack createSoilBucket(String soilType, double secondaryPercentage, gg.crystalized.botanica.PlantSim.World.BlockAliasManager aliasManager) {
+    public static ItemStack createSoilBucket(String soilType, double secondaryPercentage, BlockAliasManager aliasManager) {
         // Get the soil spec for this type
-        gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec soilSpec = getSoilSpecById(soilType);
+        SoilSpec soilSpec = getSoilSpecById(soilType);
         if (soilSpec == null) {
             gg.crystalized.botanica.Botanica.INSTANCE.getLogger().warning("Unknown soil type: " + soilType);
             return null;
@@ -209,7 +210,7 @@ public class SoilBucketData {
      * Get the soil spec by ID from the loaded soil specs.
      * This method dynamically looks up soil specs instead of hardcoding.
      */
-    private static gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec getSoilSpecById(String soilId) {
+    private static SoilSpec getSoilSpecById(String soilId) {
         // Get the soil specs from the simulation service
         try {
             gg.crystalized.botanica.PlantSim.Sim.SimulationService simulationService = gg.crystalized.botanica.Botanica.INSTANCE.getSimulationService();

@@ -1,9 +1,7 @@
-package gg.crystalized.botanica.PlantSim.Domain.Data;
+package gg.crystalized.botanica.Soil.Data;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 
 import java.util.concurrent.ConcurrentHashMap;

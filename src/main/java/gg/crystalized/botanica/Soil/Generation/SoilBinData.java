@@ -1,4 +1,4 @@
-package gg.crystalized.botanica.PlantSim.Generation;
+package gg.crystalized.botanica.Soil.Generation;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;

@@ -1,7 +1,7 @@
 package gg.crystalized.botanica.PlantSim.Bus;
 
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
-import gg.crystalized.botanica.PlantSim.World.DisplayEntityManager;
+import gg.crystalized.botanica.World.BlockPos;
+import gg.crystalized.botanica.World.DisplayEntityManager;
 import gg.crystalized.botanica.PlantSim.World.WorldAdapter;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;

@@ -6,13 +6,13 @@ import gg.crystalized.botanica.PlantSim.Bus.ItemDropMutation;
 import gg.crystalized.botanica.PlantSim.Bus.MutationBus;
 import gg.crystalized.botanica.PlantSim.Bus.SoundMutation;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec;
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
 
 import java.time.Instant;

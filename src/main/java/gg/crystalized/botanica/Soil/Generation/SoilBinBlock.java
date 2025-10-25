@@ -1,10 +1,10 @@
-package gg.crystalized.botanica.PlantSim.Generation;
+package gg.crystalized.botanica.Soil.Generation;
 
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBucketData;
+import gg.crystalized.botanica.Soil.Data.SoilBucketData;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
-import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
-import gg.crystalized.botanica.PlantSim.World.DisplayEntityManager;
+import gg.crystalized.botanica.World.BlockAliasManager;
+import gg.crystalized.botanica.World.BlockPos;
+import gg.crystalized.botanica.World.DisplayEntityManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;

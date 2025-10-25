@@ -1,7 +1,7 @@
-package gg.crystalized.botanica.PlantSim.Domain;
+package gg.crystalized.botanica.Soil.Domain;
 
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
-import gg.crystalized.botanica.PlantSim.World.ChunkRef;
+import gg.crystalized.botanica.World.BlockPos;
+import gg.crystalized.botanica.World.ChunkRef;
 
 import java.util.Collection;
 import java.util.List;

@@ -3,16 +3,15 @@ package gg.crystalized.botanica.Commands;
 import gg.crystalized.botanica.PlantSim.Actions.PlantActions;
 import gg.crystalized.botanica.PlantSim.Bus.MutationBus;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
-import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBlockData;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationService;
 import gg.crystalized.botanica.PlantSim.UI.PlantStatusUI;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
+import gg.crystalized.botanica.World.BlockAliasManager;
+import gg.crystalized.botanica.World.DisplayEntityManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -33,7 +32,7 @@ public class PlantCommands implements CommandExecutor {
     private final SchematicBlockIndex schematicBlockIndex;
     private final SimulationDataManager dataManager;
     private final gg.crystalized.botanica.PlantSim.World.SchematicManager schematicManager;
-    private final gg.crystalized.botanica.PlantSim.World.BlockAliasManager aliasManager;
+    private final BlockAliasManager aliasManager;
 
     public PlantCommands(
         SimulationDataManager data, 
@@ -42,8 +41,8 @@ public class PlantCommands implements CommandExecutor {
         SimulationService simulationService, 
         MutationBus mutationBus,
         gg.crystalized.botanica.PlantSim.World.SchematicManager schematicManager,
-        gg.crystalized.botanica.PlantSim.World.DisplayEntityManager displayEntityManager,
-        gg.crystalized.botanica.PlantSim.World.BlockAliasManager aliasManager
+        DisplayEntityManager displayEntityManager,
+        BlockAliasManager aliasManager
     ) {
         // Use the shared mutation bus that MutationApplier is watching
         this.actions = new PlantActions(data, soilRepo, plantRepo, mutationBus, schematicManager);

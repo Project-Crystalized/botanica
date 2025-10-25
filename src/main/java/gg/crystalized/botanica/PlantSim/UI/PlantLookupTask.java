@@ -1,23 +1,20 @@
 package gg.crystalized.botanica.PlantSim.UI;
 
-import gg.crystalized.botanica.Botanica;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
+import gg.crystalized.botanica.Soil.Data.SoilSpec;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.RayTraceResult;
 
 import java.util.HashMap;
 import java.util.Map;

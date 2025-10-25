@@ -1,12 +1,10 @@
 package gg.crystalized.botanica.Interactions;
 
-import gg.crystalized.botanica.Botanica;
 import gg.crystalized.botanica.PlantSim.Actions.PlantActions;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
+import gg.crystalized.botanica.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import org.bukkit.ChatColor;
 

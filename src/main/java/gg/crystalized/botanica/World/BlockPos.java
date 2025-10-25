@@ -1,4 +1,4 @@
-package gg.crystalized.botanica.PlantSim.World;
+package gg.crystalized.botanica.World;
 
 import org.bukkit.Location;
 

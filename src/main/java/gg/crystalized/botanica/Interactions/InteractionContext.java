@@ -1,8 +1,8 @@
 package gg.crystalized.botanica.Interactions;
 
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
+import gg.crystalized.botanica.World.BlockPos;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;

@@ -1,7 +1,7 @@
 package gg.crystalized.botanica.PlantSim.Bus;
 
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 
 /**
  * Mutation to create or remove a Block Display entity.

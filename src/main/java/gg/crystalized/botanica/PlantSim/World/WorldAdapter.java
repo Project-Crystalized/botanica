@@ -1,5 +1,7 @@
 package gg.crystalized.botanica.PlantSim.World;
 
+import gg.crystalized.botanica.World.BlockPos;
+
 public interface WorldAdapter {
     void setBlock(BlockPos pos, String materialName, String blockDataJson);
     void dropItem(BlockPos pos, String materialName, int amount, String nbtJson);

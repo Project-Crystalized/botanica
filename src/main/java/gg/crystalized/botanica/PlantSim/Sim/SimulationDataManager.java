@@ -8,8 +8,8 @@ import gg.crystalized.botanica.PlantSim.Domain.Data.PlantRegistry;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSetRegistry;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSetSpec;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilRegistry;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
+import gg.crystalized.botanica.Soil.Data.SoilRegistry;
+import gg.crystalized.botanica.Soil.Data.SoilSpec;
 
 import java.io.File;
 import java.io.FileReader;

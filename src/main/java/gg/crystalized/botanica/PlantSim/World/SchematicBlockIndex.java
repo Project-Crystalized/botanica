@@ -1,6 +1,7 @@
 package gg.crystalized.botanica.PlantSim.World;
 
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
+import gg.crystalized.botanica.World.BlockPos;
 
 import java.util.Map;
 import java.util.UUID;

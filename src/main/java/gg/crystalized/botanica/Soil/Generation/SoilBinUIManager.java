@@ -1,7 +1,7 @@
-package gg.crystalized.botanica.PlantSim.Generation;
+package gg.crystalized.botanica.Soil.Generation;
 
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Display;

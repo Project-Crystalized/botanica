@@ -1,28 +1,23 @@
 package gg.crystalized.botanica.PlantSim.Sim;
 
-import gg.crystalized.botanica.Botanica;
 import gg.crystalized.botanica.Config.BotanicaSimulationConfig;
 import gg.crystalized.botanica.PlantSim.Bus.Mutation;
 import gg.crystalized.botanica.PlantSim.Bus.MutationBus;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Planner.LocalWorkPlanner;
 import gg.crystalized.botanica.PlantSim.Planner.WorkPlanner;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
+import gg.crystalized.botanica.World.DisplayEntityManager;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /** Periodic lane + fast lane orchestration. */
@@ -38,7 +33,7 @@ public class SimulationManager {
 
     private BukkitTask periodicTask;
 
-    public SimulationManager(BotanicaSimulationConfig cfg, ExecutorService workers, MutationBus bus, PlantRepo plantRepo, SoilRepo soilRepo, WorkPlanner planner, SchematicBlockIndex schematicBlockIndex, SchematicManager schematicManager, gg.crystalized.botanica.PlantSim.World.DisplayEntityManager displayEntityManager) {
+    public SimulationManager(BotanicaSimulationConfig cfg, ExecutorService workers, MutationBus bus, PlantRepo plantRepo, SoilRepo soilRepo, WorkPlanner planner, SchematicBlockIndex schematicBlockIndex, SchematicManager schematicManager, DisplayEntityManager displayEntityManager) {
         this.cfg = cfg; this.workers = workers; this.bus = bus; this.plantRepo = plantRepo; this.soilRepo = soilRepo; this.planner = planner;
         this.service = new SimulationService(dataManager, soilRepo, bus, schematicBlockIndex, schematicManager);
     }

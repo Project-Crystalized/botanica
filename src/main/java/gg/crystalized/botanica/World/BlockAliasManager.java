@@ -1,4 +1,4 @@
-package gg.crystalized.botanica.PlantSim.World;
+package gg.crystalized.botanica.World;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

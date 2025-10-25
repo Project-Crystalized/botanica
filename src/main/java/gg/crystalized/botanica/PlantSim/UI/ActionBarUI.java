@@ -1,9 +1,9 @@
 package gg.crystalized.botanica.PlantSim.UI;
 
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilSpec;
+import gg.crystalized.botanica.Soil.Data.SoilSpec;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;

@@ -1,4 +1,4 @@
-package gg.crystalized.botanica.PlantSim.World;
+package gg.crystalized.botanica.World;
 
 /** Identifies a chunk in a world. Useful for grouping and loading plants per chunk. */
 public record ChunkRef(String world, int chunkX, int chunkZ) {

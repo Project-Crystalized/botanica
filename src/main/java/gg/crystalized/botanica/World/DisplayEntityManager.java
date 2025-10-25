@@ -1,6 +1,7 @@
-package gg.crystalized.botanica.PlantSim.World;
+package gg.crystalized.botanica.World;
 
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
+import gg.crystalized.botanica.PlantSim.World.SchematicManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -10,7 +11,6 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Transformation;
-import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;

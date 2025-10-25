@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import gg.crystalized.botanica.Botanica;
 import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
+import gg.crystalized.botanica.World.BlockAliasManager;
 
 import java.io.File;
 import java.io.FileReader;

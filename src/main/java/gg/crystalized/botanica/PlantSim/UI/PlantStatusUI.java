@@ -3,11 +3,11 @@ package gg.crystalized.botanica.PlantSim.UI;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantModifier;
 import gg.crystalized.botanica.PlantSim.Domain.Data.PlantSpec;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockPos;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 

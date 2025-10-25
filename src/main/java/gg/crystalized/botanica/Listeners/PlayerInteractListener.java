@@ -4,17 +4,16 @@ import gg.crystalized.botanica.Interactions.ActionResolver;
 import gg.crystalized.botanica.Interactions.InteractionContext;
 import gg.crystalized.botanica.Interactions.ItemActionRegistry;
 import gg.crystalized.botanica.PlantSim.Actions.PlantActions;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBucketData;
-import gg.crystalized.botanica.PlantSim.Domain.Data.SoilBlockData;
+import gg.crystalized.botanica.Soil.Data.SoilBucketData;
+import gg.crystalized.botanica.Soil.Data.SoilBlockData;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
-import gg.crystalized.botanica.PlantSim.Domain.SoilInstance;
-import gg.crystalized.botanica.PlantSim.Domain.SoilRepo;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
-import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
-import gg.crystalized.botanica.PlantSim.World.DisplayEntityManager;
-import gg.crystalized.botanica.PlantSim.Generation.SoilBinBlock;
-import org.bukkit.FluidCollisionMode;
+import gg.crystalized.botanica.Soil.Domain.SoilInstance;
+import gg.crystalized.botanica.Soil.Domain.SoilRepo;
+import gg.crystalized.botanica.World.BlockPos;
+import gg.crystalized.botanica.World.BlockAliasManager;
+import gg.crystalized.botanica.World.DisplayEntityManager;
+import gg.crystalized.botanica.Soil.Generation.SoilBinBlock;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -27,9 +26,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.util.RayTraceResult;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -694,7 +691,7 @@ public class PlayerInteractListener implements Listener {
         // Check if this is a soil bin (barrier block with soil bin data)
         if (clickedBlock.getType() == Material.BARRIER) {
             // Check if it has soil bin data
-            int totalVolume = gg.crystalized.botanica.PlantSim.Generation.SoilBinData.getTotalVolume(clickedBlock);
+            int totalVolume = gg.crystalized.botanica.Soil.Generation.SoilBinData.getTotalVolume(clickedBlock);
             
             // If it has any data, it's a soil bin (even if empty, it would have been initialized)
             // We check if data exists by seeing if we can get any stored value
@@ -714,7 +711,7 @@ public class PlayerInteractListener implements Listener {
                 displayEntityManager.removeDisplayBlock(pos);
                 
                 // Clear the soil bin data
-                gg.crystalized.botanica.PlantSim.Generation.SoilBinData.clearSoilBinData(clickedBlock);
+                gg.crystalized.botanica.Soil.Generation.SoilBinData.clearSoilBinData(clickedBlock);
                 
                 // Remove the barrier block
                 clickedBlock.setType(Material.AIR);
@@ -785,7 +782,7 @@ public class PlayerInteractListener implements Listener {
         displayEntityManager.setDisplayBlock(pos, "soil_bin_0");
         
         // Initialize the soil bin data
-        gg.crystalized.botanica.PlantSim.Generation.SoilBinData.createSoilBin(targetBlock);
+        gg.crystalized.botanica.Soil.Generation.SoilBinData.createSoilBin(targetBlock);
         
         // Remove one item from the player's hand
         if (item.getAmount() > 1) {

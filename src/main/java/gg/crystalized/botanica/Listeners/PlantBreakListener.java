@@ -6,8 +6,8 @@ import gg.crystalized.botanica.PlantSim.Domain.Data.TreeSchematic;
 import gg.crystalized.botanica.PlantSim.Domain.PlantInstance;
 import gg.crystalized.botanica.PlantSim.Domain.PlantRepo;
 import gg.crystalized.botanica.PlantSim.Sim.SimulationDataManager;
-import gg.crystalized.botanica.PlantSim.World.BlockAliasManager;
-import gg.crystalized.botanica.PlantSim.World.BlockPos;
+import gg.crystalized.botanica.World.BlockAliasManager;
+import gg.crystalized.botanica.World.BlockPos;
 import gg.crystalized.botanica.PlantSim.World.SchematicBlockIndex;
 import gg.crystalized.botanica.PlantSim.World.SchematicManager;
 import org.bukkit.Location;
@@ -22,7 +22,6 @@ import org.bukkit.inventory.ItemStack;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 
 /**
  * Listens for block break events and removes plant instances when their blocks are broken.
